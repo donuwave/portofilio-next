@@ -23,9 +23,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <Link href="/admin/experience" className="hover:underline">
             Опыт
           </Link>
-          <span className="text-zinc-400" title="Появится на следующем этапе">
+          <Link href="/admin/projects" className="hover:underline">
             Проекты
-          </span>
+          </Link>
           <Link href="/admin/files" className="hover:underline">
             Файлы
           </Link>
