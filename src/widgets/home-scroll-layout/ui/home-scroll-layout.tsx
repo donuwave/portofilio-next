@@ -275,6 +275,18 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
 
         gsap.set([descRef.current, emailRef.current], { autoAlpha: 0, y: 16 });
 
+        // The sidebar/tag/scroll-hint default to invisible (lg:invisible in
+        // the JSX) precisely so the server-rendered markup — final-size text,
+        // final photo size, a fully visible back-to-top button — is never
+        // painted for that first frame before this effect has run: the
+        // browser paints the raw SSR HTML well before the JS bundle finishes
+        // loading/hydrating, a gap useLayoutEffect alone can't close since it
+        // only prevents a flash *between* React commits, not before the very
+        // first one. Revealing only now, after every piece above has already
+        // been snapped into its correct hero-frame position, means the very
+        // first visible frame is already the finished hero arrangement.
+        gsap.set([sidebarRef.current, tagRef.current, scrollHintRef.current], { autoAlpha: 1 });
+
         const tl = gsap.timeline({
           scrollTrigger: {
             trigger: sectionRef.current,
@@ -529,7 +541,7 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
       {tag && (
         <div
           ref={tagRef}
-          className="px-6 pt-10 sm:px-12 lg:fixed lg:left-12 lg:top-10 lg:z-10 lg:bg-[#141312] lg:px-3 lg:py-2 lg:-ml-3 lg:-mt-2 lg:pt-2"
+          className="px-6 pt-10 sm:px-12 lg:invisible lg:fixed lg:left-12 lg:top-10 lg:z-10 lg:bg-[#141312] lg:px-3 lg:py-2 lg:-ml-3 lg:-mt-2 lg:pt-2"
         >
           <p className="text-xs tracking-[0.25em] text-[#8a8378]">{tag}</p>
           <p className="mt-1 text-xs tracking-[0.15em] text-[#5c584f]">INDEX — ПОРТФОЛИО / {new Date().getFullYear()}</p>
@@ -542,7 +554,7 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
           whole pinned subtree — dots included — was still stacking below
           sibling fixed chrome like the tag/scroll-hint (z-10) whenever a dot
           flew near them. */}
-      <div ref={sidebarRef} className="lg:z-20 lg:col-start-2 lg:row-start-1 lg:h-screen">
+      <div ref={sidebarRef} className="lg:invisible lg:z-20 lg:col-start-2 lg:row-start-1 lg:h-screen">
         <div className="flex h-full flex-col items-center justify-center gap-6 px-6 py-16 sm:px-12 lg:items-end lg:gap-3 lg:py-10">
           {/* Mobile-only static hero (no scroll animation below lg) */}
           <div className="flex flex-col items-center gap-6 lg:hidden">
@@ -647,7 +659,7 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
 
       <p
         ref={scrollHintRef}
-        className="px-6 pb-10 font-hand text-xl text-[#8a8378] sm:px-12 lg:fixed lg:bottom-10 lg:left-12 lg:z-10 lg:bg-[#141312] lg:px-3 lg:py-2 lg:-ml-3 lg:-mb-2 lg:pb-2"
+        className="px-6 pb-10 font-hand text-xl text-[#8a8378] sm:px-12 lg:invisible lg:fixed lg:bottom-10 lg:left-12 lg:z-10 lg:bg-[#141312] lg:px-3 lg:py-2 lg:-ml-3 lg:-mb-2 lg:pb-2"
       >
         Листай вниз ↓
       </p>
@@ -656,7 +668,7 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
         ref={backToTopRef}
         href="#top"
         onClick={handleBackToTopClick}
-        className="group hidden lg:fixed lg:left-12 lg:top-32 lg:z-10 lg:-ml-3 lg:flex lg:flex-col lg:items-center lg:gap-2 lg:bg-[#141312] lg:px-3 lg:py-3 lg:text-[#8a8378] lg:transition-colors lg:hover:text-[#ece5d6]"
+        className="group hidden lg:invisible lg:fixed lg:left-12 lg:top-32 lg:z-10 lg:-ml-3 lg:flex lg:flex-col lg:items-center lg:gap-2 lg:bg-[#141312] lg:px-3 lg:py-3 lg:text-[#8a8378] lg:transition-colors lg:hover:text-[#ece5d6]"
       >
         <span
           aria-hidden="true"
