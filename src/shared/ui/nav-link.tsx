@@ -1,4 +1,7 @@
-import type { ReactNode } from "react";
+"use client";
+
+import type { MouseEvent, ReactNode } from "react";
+import { useLenis } from "@/shared/lib/smooth-scroll-provider";
 
 /**
  * Deliberately a different, more jagged/crooked squiggle than ScribbleUnderline's
@@ -23,8 +26,21 @@ function HoverUnderline() {
 }
 
 export function NavLink({ href, children, className = "" }: { href: string; children: ReactNode; className?: string }) {
+  const lenisRef = useLenis();
+
+  // Native/CSS smooth-scroll fights Lenis's own animation loop while it's
+  // still settling from the last scroll, making clicks feel dead until it
+  // stops — routing through Lenis's own scrollTo keeps navigation responsive
+  // no matter what Lenis is doing when the click happens.
+  function handleClick(e: MouseEvent<HTMLAnchorElement>) {
+    const lenis = lenisRef?.current;
+    if (!lenis || !href.startsWith("#")) return;
+    e.preventDefault();
+    lenis.scrollTo(href);
+  }
+
   return (
-    <a href={href} className={`group inline-flex flex-col hover:text-[#ece5d6] ${className}`}>
+    <a href={href} onClick={handleClick} className={`group inline-flex flex-col hover:text-[#ece5d6] ${className}`}>
       <span>{children}</span>
       <HoverUnderline />
     </a>

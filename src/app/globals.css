@@ -21,12 +21,27 @@
   }
 }
 
-html {
-  scroll-behavior: smooth;
-}
+/* No CSS scroll-behavior:smooth here — Lenis drives smooth scrolling itself
+   (see smooth-scroll-provider.tsx's useLenis + NavLink/back-to-top's
+   scrollTo calls), and combining the two makes Lenis fight the browser's own
+   native smooth-scroll while it's still mid-animation, which is what made
+   nav clicks feel unresponsive until Lenis happened to settle first. */
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
+
+/* Idle hero flourish — the tagline's arrow. The two dots above "ii" are
+   GSAP-driven instead of CSS keyframes (see home-scroll-layout.tsx) since
+   they need real measured distances, sequencing, and mouse-reactivity. */
+@keyframes arrow-bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-0.2em);
+  }
 }

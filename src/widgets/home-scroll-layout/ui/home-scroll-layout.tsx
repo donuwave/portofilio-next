@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useLayoutEffect, useRef } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import type { Profile } from "@/entities/profile/model/types";
@@ -9,12 +9,61 @@ import { ProfilePhoto } from "@/entities/profile/ui/profile-photo";
 import { NAV_ITEMS } from "@/shared/config/nav-items";
 import { SOCIAL_LINKS } from "@/shared/config/social-links";
 import { pickLocalized } from "@/shared/lib/localized-text";
+import { useLenis } from "@/shared/lib/smooth-scroll-provider";
 import { splitName } from "@/shared/lib/split-name";
 import { NavLink } from "@/shared/ui/nav-link";
 import { ScribbleUnderline } from "@/shared/ui/scribble-underline";
 import { ProjectsGrid } from "@/widgets/projects-grid/ui/projects-grid";
 
 gsap.registerPlugin(ScrollTrigger);
+
+// Uppercase text renders "i" as a dotless capital I, swallowing the dot — this
+// stands two decorative dots back in above the first "ii" it finds. Each dot
+// is two nested elements: an outer "wrap" (pushed around by the mouse) and an
+// inner "dot" (driven by the idle leapfrog timeline) — nesting them lets both
+// animations apply independently and compose visually instead of fighting
+// over the same transform. Color matches the surrounding text (bg-current).
+function NameWithDots({
+  text,
+  dotWrapRefs,
+  dotRefs,
+}: {
+  text: string;
+  dotWrapRefs: React.MutableRefObject<(HTMLSpanElement | null)[]>;
+  dotRefs: React.MutableRefObject<(HTMLSpanElement | null)[]>;
+}) {
+  const match = text.match(/ii/i);
+  if (!match || match.index === undefined) return <>{text}</>;
+  const start = match.index;
+  const before = text.slice(0, start);
+  const after = text.slice(start + 2);
+  return (
+    <>
+      {before}
+      {[0, 1].map((i) => (
+        <span key={i} className="relative inline-block">
+          i
+          <span
+            ref={(el) => {
+              dotWrapRefs.current[i] = el;
+            }}
+            aria-hidden="true"
+            className="absolute top-[-0.55em] left-1/2 h-[0.16em] w-[0.16em]"
+            style={{ marginLeft: "-0.08em" }}
+          >
+            <span
+              ref={(el) => {
+                dotRefs.current[i] = el;
+              }}
+              className="block h-full w-full rounded-full bg-current"
+            />
+          </span>
+        </span>
+      ))}
+      {after}
+    </>
+  );
+}
 
 export function HomeScrollLayout({ profile, projects }: { profile: Profile; projects: Project[] }) {
   const sectionRef = useRef<HTMLDivElement>(null);
@@ -29,6 +78,9 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
   // one copy fading out while an unrelated copy fades in.
   const nameRef = useRef<HTMLHeadingElement>(null);
   const surnameRef = useRef<HTMLHeadingElement>(null);
+  // The two decorative dots above "ii" — see NameWithDots.
+  const dotWrapRefs = useRef<(HTMLSpanElement | null)[]>([]);
+  const dotRefs = useRef<(HTMLSpanElement | null)[]>([]);
   const underlineWrapRef = useRef<HTMLDivElement>(null);
   const underlinePathRef = useRef<SVGPathElement>(null);
   const taglineRef = useRef<HTMLParagraphElement>(null);
@@ -60,15 +112,38 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
   // shares the screen with the tag/scroll-hint above.
   const backToTopRef = useRef<HTMLAnchorElement>(null);
 
+  const lenisRef = useLenis();
+  // Native/CSS smooth-scroll fights Lenis's own animation loop while it's
+  // still settling from the last scroll, making the click feel dead until it
+  // stops — routing through Lenis's own scrollTo keeps it responsive no
+  // matter what Lenis is doing when the click happens.
+  function handleBackToTopClick(e: React.MouseEvent<HTMLAnchorElement>) {
+    const lenis = lenisRef?.current;
+    if (!lenis) return;
+    e.preventDefault();
+    lenis.scrollTo("#top");
+  }
+
   const { first, rest } = splitName(profile.name);
   const tag = profile.skills.slice(0, 3).join(" / ").toUpperCase();
   const about = pickLocalized(profile.about);
   const position = profile.currentJobPosition ? pickLocalized(profile.currentJobPosition) : null;
 
-  useEffect(() => {
+  // useLayoutEffect (not useEffect) — this sets every element's hero-frame
+  // starting position via gsap.set. With useEffect, the browser paints the
+  // elements' plain CSS (final/settled) layout first, then this runs a frame
+  // later and snaps them to the hero look — a visible flash of the wrong
+  // layout on every load. useLayoutEffect runs before that first paint.
+  useLayoutEffect(() => {
     const mm = gsap.matchMedia();
 
     mm.add("(min-width: 1024px)", () => {
+      // Declared here (not inside the gsap.context callback below) so the
+      // cleanup at the bottom of this function — which runs outside that
+      // callback's scope — can still reach them to remove the listener/ticker.
+      let onDotsMouseMove: ((e: MouseEvent) => void) | null = null;
+      let dotsTicker: (() => void) | null = null;
+
       const ctx = gsap.context(() => {
         // dasharray "1 3" (not just "1") gives the hidden gap phase 3x the
         // buffer instead of sitting exactly on the dash/gap boundary — with a
@@ -263,6 +338,21 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
           pin: sidebarRef.current,
         });
 
+        // Images (project covers, the profile photo) and web fonts can still be
+        // loading when this effect first runs, so the page's real height isn't
+        // known yet — ScrollTrigger's "bottom bottom" end gets calculated short,
+        // and correcting it later (once everything's actually loaded) unpins and
+        // re-pins the sidebar right at the bottom of the page, which reads as a
+        // jerk. Refreshing once loading has genuinely finished fixes the end
+        // value before that boundary can ever be reached.
+        const refresh = () => ScrollTrigger.refresh();
+        if (document.readyState === "complete") {
+          refresh();
+        } else {
+          window.addEventListener("load", refresh, { once: true });
+        }
+        document.fonts?.ready?.then(refresh);
+
         // Left column (headline/stats/about/projects) is a normal scrolling column
         // that starts below the hero's settle point — its own light, non-scrubbed
         // reveal fires once when it naturally scrolls into view.
@@ -285,9 +375,150 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
             toggleActions: "play none none reverse",
           },
         }).to(backToTopRef.current, { autoAlpha: 1, duration: 0.4 });
+
+        // --- Decorative "ii" dots: a measured leapfrog hop, one dot at a time,
+        // plus a subtle mouse-pull — active only while genuinely at the very
+        // top of the hero. ---
+        const dot0 = dotRefs.current[0];
+        const dot1 = dotRefs.current[1];
+        const wrap0 = dotWrapRefs.current[0];
+        const wrap1 = dotWrapRefs.current[1];
+
+        if (dot0 && dot1 && wrap0 && wrap1) {
+          // A genuine swap always requires one dot to land exactly where the
+          // other currently sits — no amount of stagger timing avoids a
+          // collision right at that landing instant. Simpler and reliably
+          // collision-free: each dot only ever hops straight up in place,
+          // taking turns, and never changes its own horizontal anchor.
+          // "bounce.out" on the landing half gives each hop a real ricochet —
+          // the dot overshoots the baseline and settles through a couple of
+          // shrinking rebounds instead of just easing straight down.
+          const HOP = 14;
+          const UP_DURATION = 0.22;
+          const LAND_DURATION = 0.42;
+          const GAP = 0.16;
+          const leapfrogTl = gsap.timeline({ repeat: -1, paused: true });
+          leapfrogTl
+            .to(dot0, { y: -HOP, duration: UP_DURATION, ease: "power2.out" })
+            .to(dot0, { y: 0, duration: LAND_DURATION, ease: "bounce.out" })
+            .to(dot1, { y: -HOP, duration: UP_DURATION, ease: "power2.out" }, `+=${GAP}`)
+            .to(dot1, { y: 0, duration: LAND_DURATION, ease: "bounce.out" });
+
+          // Dots flee the cursor instead of chasing it — and the longer the
+          // cursor keeps hovering near one, the further it keeps creeping
+          // away (an accumulator that builds up while the cursor is close),
+          // strongly enough to shove a dot clean off-screen if chased, and
+          // eases back to rest once the cursor moves off.
+          const MAX_FLEE = Math.max(window.innerWidth, window.innerHeight); // strong enough to clear the viewport
+          const FLEE_RADIUS = 110;
+          const BUILD_PER_SEC = 260; // px/sec of drift growth while hovered, closer = faster
+          const DECAY_PER_SEC = 1.6; // exponential ease-back rate once the cursor leaves
+
+          const pullX0 = gsap.quickTo(wrap0, "x", { duration: 0.35, ease: "power2.out" });
+          const pullY0 = gsap.quickTo(wrap0, "y", { duration: 0.35, ease: "power2.out" });
+          const pullX1 = gsap.quickTo(wrap1, "x", { duration: 0.35, ease: "power2.out" });
+          const pullY1 = gsap.quickTo(wrap1, "y", { duration: 0.35, ease: "power2.out" });
+
+          let heroActive = true;
+          let mouseX = -9999;
+          let mouseY = -9999;
+          const flee0 = { x: 0, y: 0 };
+          const flee1 = { x: 0, y: 0 };
+
+          onDotsMouseMove = (e: MouseEvent) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+          };
+          window.addEventListener("mousemove", onDotsMouseMove);
+
+          // Runs every frame (not just on mousemove) so "holding the cursor
+          // still near a dot" keeps building the drift over time too, not
+          // only while the cursor is actively moving.
+          let lastT = performance.now();
+          dotsTicker = () => {
+            const now = performance.now();
+            const dt = Math.min((now - lastT) / 1000, 0.05);
+            lastT = now;
+            if (!heroActive) return;
+
+            const step = (dot: HTMLSpanElement, flee: { x: number; y: number }, qx: typeof pullX0, qy: typeof pullY0) => {
+              const rect = dot.getBoundingClientRect();
+              const cx = rect.left + rect.width / 2;
+              const cy = rect.top + rect.height / 2;
+              const dxm = mouseX - cx;
+              const dym = mouseY - cy;
+              const dist = Math.hypot(dxm, dym);
+              if (dist < FLEE_RADIUS && dist > 0.01) {
+                const nx = -dxm / dist;
+                const ny = -dym / dist;
+                const closeness = 1 - dist / FLEE_RADIUS;
+                flee.x += nx * BUILD_PER_SEC * closeness * dt;
+                flee.y += ny * BUILD_PER_SEC * closeness * dt;
+                const mag = Math.hypot(flee.x, flee.y);
+                if (mag > MAX_FLEE) {
+                  flee.x = (flee.x / mag) * MAX_FLEE;
+                  flee.y = (flee.y / mag) * MAX_FLEE;
+                }
+              } else {
+                const decay = Math.exp(-DECAY_PER_SEC * dt);
+                flee.x *= decay;
+                flee.y *= decay;
+                if (Math.hypot(flee.x, flee.y) < 0.05) {
+                  flee.x = 0;
+                  flee.y = 0;
+                }
+              }
+              qx(flee.x);
+              qy(flee.y);
+            };
+            step(dot0, flee0, pullX0, pullY0);
+            step(dot1, flee1, pullX1, pullY1);
+          };
+          gsap.ticker.add(dotsTicker);
+
+          // The hop keeps playing everywhere on the page — only the mouse
+          // repel is hero-only. Leaving the very top just stops the cursor
+          // from being tracked and resets the *repel* offset (the wrap), never
+          // touching dot0/dot1 — those belong entirely to leapfrogTl, which
+          // keeps running the whole time, so killing tweens on them here would
+          // also kill the hop itself.
+          ScrollTrigger.create({
+            trigger: sectionRef.current,
+            start: "top top",
+            end: "+=1",
+            onLeave: () => {
+              // Set the flag first, then hand the reset to 0 back to the
+              // quickTo functions themselves rather than fighting them with
+              // gsap.killTweensOf/gsap.set — quickTo reuses one internal tween
+              // per call, and externally killing that tween leaves it broken
+              // for good: every later call silently no-ops, which is why the
+              // repel used to permanently stop working after the first scroll
+              // away and back. Calling pullX0(0) etc. retargets that same
+              // internal tween the way it's meant to be driven.
+              heroActive = false;
+              flee0.x = 0;
+              flee0.y = 0;
+              flee1.x = 0;
+              flee1.y = 0;
+              pullX0(0);
+              pullY0(0);
+              pullX1(0);
+              pullY1(0);
+            },
+            onEnterBack: () => {
+              heroActive = true;
+            },
+          });
+
+          leapfrogTl.play();
+        }
       }, sectionRef);
 
-      return () => ctx.revert();
+      return () => {
+        ctx.revert();
+        if (onDotsMouseMove) window.removeEventListener("mousemove", onDotsMouseMove);
+        if (dotsTicker) gsap.ticker.remove(dotsTicker);
+      };
     });
 
     return () => mm.revert();
@@ -305,7 +536,13 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
         </div>
       )}
 
-      <div ref={sidebarRef} className="lg:col-start-2 lg:row-start-1 lg:h-screen">
+      {/* lg:z-20 — z-index only ever competes within the same stacking level,
+          so the name-group's z-30 (below) only won against its OWN siblings
+          (photo, nav…) inside here; sidebarRef itself had no z-index, so the
+          whole pinned subtree — dots included — was still stacking below
+          sibling fixed chrome like the tag/scroll-hint (z-10) whenever a dot
+          flew near them. */}
+      <div ref={sidebarRef} className="lg:z-20 lg:col-start-2 lg:row-start-1 lg:h-screen">
         <div className="flex h-full flex-col items-center justify-center gap-6 px-6 py-16 sm:px-12 lg:items-end lg:gap-3 lg:py-10">
           {/* Mobile-only static hero (no scroll animation below lg) */}
           <div className="flex flex-col items-center gap-6 lg:hidden">
@@ -326,15 +563,22 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
 
           {/* Desktop name group — real final position; GSAP only ever animates
               transform/opacity on top of this layout, never toggles visibility. */}
-          <div className="relative hidden text-right lg:block">
+          {/* z-30 — the "ii" dots live inside this group and can fly well
+              outside the name's own footprint via the mouse-repel; without an
+              explicit stacking order here they'd paint underneath whichever
+              later sibling (photo, nav, social…) they happened to cross. */}
+          <div className="relative z-30 hidden text-right lg:block">
             <p ref={taglineRef} className="absolute -top-10 right-0 whitespace-nowrap font-hand text-2xl text-[#8a8378]">
-              ↙ живые интерфейсы
+              <span className="inline-block" style={{ animation: "arrow-bounce 1.6s ease-in-out infinite" }}>
+                ↙
+              </span>{" "}
+              живые интерфейсы
             </p>
             <h1
               ref={nameRef}
               className="ml-auto w-max font-display text-5xl uppercase leading-[0.9] tracking-tight text-[#ece5d6]"
             >
-              {first || "—"}
+              <NameWithDots text={first || "—"} dotWrapRefs={dotWrapRefs} dotRefs={dotRefs} />
             </h1>
             {rest && (
               <h1
@@ -411,6 +655,7 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
       <a
         ref={backToTopRef}
         href="#top"
+        onClick={handleBackToTopClick}
         className="group hidden lg:fixed lg:left-12 lg:top-32 lg:z-10 lg:-ml-3 lg:flex lg:flex-col lg:items-center lg:gap-2 lg:bg-[#141312] lg:px-3 lg:py-3 lg:text-[#8a8378] lg:transition-colors lg:hover:text-[#ece5d6]"
       >
         <span
