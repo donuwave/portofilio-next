@@ -7,7 +7,10 @@ import type { Profile } from "../model/types";
 export const getProfile = cache(async (): Promise<Profile | null> => {
   const profile = await prisma.profile.findUnique({
     where: { id: 1 },
-    include: { avatar: true },
+    include: {
+      avatar: true,
+      experience: { orderBy: { order: "asc" }, include: { logo: true } },
+    },
   });
   if (!profile) return null;
 
@@ -20,5 +23,14 @@ export const getProfile = cache(async (): Promise<Profile | null> => {
     currentJobCompany: profile.currentJobCompany,
     currentJobPosition: profile.currentJobPosition as unknown as LocalizedText | null,
     currentJobDescription: profile.currentJobDescription as unknown as LocalizedText | null,
+    experience: profile.experience.map((e) => ({
+      id: e.id,
+      company: e.company,
+      position: e.position as unknown as LocalizedText,
+      dateFrom: e.dateFrom.toISOString(),
+      dateTo: e.dateTo ? e.dateTo.toISOString() : null,
+      description: e.description as unknown as LocalizedText,
+      logo: e.logo ? { path: e.logo.path } : null,
+    })),
   };
 });

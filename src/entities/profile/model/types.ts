@@ -1,3 +1,4 @@
+import type { Experience } from "@/entities/experience/model/types";
 import type { LocalizedText } from "@/shared/lib/localized-text";
 
 export type ProfileAvatar = {
@@ -13,4 +14,5 @@ export type Profile = {
   currentJobCompany: string | null;
   currentJobPosition: LocalizedText | null;
   currentJobDescription: LocalizedText | null;
+  experience: Experience[];
 };

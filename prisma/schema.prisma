@@ -48,6 +48,8 @@ model Experience {
   dateTo      DateTime?
   description Json
   order       Int       @default(0)
+  logoId      String?
+  logo        Media?    @relation(fields: [logoId], references: [id])
 
   @@index([profileId])
 }
@@ -95,9 +97,10 @@ model Media {
   size     Int
   mimeType String
 
-  cases          CaseMedia[]
-  usedAsCover    Project[]
-  usedAsAvatarOf Profile?
+  cases                CaseMedia[]
+  usedAsCover          Project[]
+  usedAsAvatarOf       Profile?
+  usedAsExperienceLogo Experience[]
 
   createdAt DateTime @default(now())
 }

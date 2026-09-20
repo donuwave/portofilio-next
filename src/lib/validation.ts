@@ -36,6 +36,7 @@ export const experienceCreateSchema = z.object({
   dateTo: z.coerce.date().nullable().optional(),
   description: localizedTextSchema,
   order: z.number().int().optional(),
+  logoId: z.string().nullable().optional(),
 });
 
 export const experienceUpdateSchema = experienceCreateSchema.partial();

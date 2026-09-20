@@ -13,6 +13,7 @@ import { useLenis } from "@/shared/lib/smooth-scroll-provider";
 import { splitName } from "@/shared/lib/split-name";
 import { NavLink } from "@/shared/ui/nav-link";
 import { ScribbleUnderline } from "@/shared/ui/scribble-underline";
+import { ExperienceTimeline } from "@/widgets/experience-timeline/ui/experience-timeline";
 import { ProjectsGrid } from "@/widgets/projects-grid/ui/projects-grid";
 
 gsap.registerPlugin(ScrollTrigger);
@@ -730,6 +731,14 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
             )}
           </div>
         </section>
+
+        {profile.experience.length > 0 && (
+          <section id="experience" className="border-t border-[#2a2824] px-6 py-24 sm:px-12">
+            <p className="text-xs tracking-[0.25em] text-[#8a8378]">ОПЫТ</p>
+            <h2 className="mt-6 font-display text-3xl text-[#ece5d6] sm:text-4xl">Мой путь</h2>
+            <ExperienceTimeline items={profile.experience} />
+          </section>
+        )}
 
         <div id="projects">
           <ProjectsGrid projects={projects} />

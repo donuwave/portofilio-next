@@ -1,3 +1,4 @@
+import type { ExperienceAdmin } from "@/entities/experience/model/admin-types";
 import type { Media } from "@/entities/media/model/types";
 import type { LocalizedText } from "@/shared/lib/localized-text";
 
@@ -13,6 +14,7 @@ export type ProfileAdmin = {
   currentJobPosition: LocalizedText | null;
   currentJobFrom: string | null;
   currentJobDescription: LocalizedText | null;
+  experience: ExperienceAdmin[];
 };
 
 export type ProfileUpdateInput = Partial<Omit<ProfileAdmin, "avatar">>;

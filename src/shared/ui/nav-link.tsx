@@ -10,7 +10,21 @@ import { useLenis } from "@/shared/lib/smooth-scroll-provider";
  */
 function HoverUnderline() {
   return (
-    <svg viewBox="0 0 120 10" preserveAspectRatio="none" className="mt-0.5 h-[0.5em] w-full" aria-hidden="true">
+    <svg
+      viewBox="0 0 120 10"
+      preserveAspectRatio="none"
+      // Absolutely positioned (not a normal flex-col sibling of the label) —
+      // an in-flow svg here contributes to the <a>'s own intrinsic width via
+      // its w-full percentage, and since the <a> is itself shrink-to-fit, a
+      // definite height (h-[0.5em]) with an indefinite container width makes
+      // browsers fall back to sizing the svg by its own aspect ratio
+      // (viewBox 120:10 = 12:1) times that height — 14px tall at 28px type
+      // resolves to a 168px-wide svg regardless of the label's real text
+      // width, so any label shorter than that reads as if it had a huge
+      // trailing gap before the next nav item. Taking it out of flow lets
+      // the <a> size to the text alone; inset-x-0 then stretches it to match.
+      className="absolute inset-x-0 top-full mt-0.5 h-[0.5em]"
+      aria-hidden="true">
       <path
         d="M1 6 L 15 2 L 29 8 L 43 3 L 57 7 L 71 2 L 85 8 L 99 3 L 119 6"
         fill="none"
@@ -40,7 +54,7 @@ export function NavLink({ href, children, className = "" }: { href: string; chil
   }
 
   return (
-    <a href={href} onClick={handleClick} className={`group inline-flex flex-col hover:text-[#ece5d6] ${className}`}>
+    <a href={href} onClick={handleClick} className={`group relative inline-block hover:text-[#ece5d6] ${className}`}>
       <span>{children}</span>
       <HoverUnderline />
     </a>

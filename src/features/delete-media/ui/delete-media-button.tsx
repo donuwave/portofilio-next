@@ -5,7 +5,7 @@ import { deleteMedia } from "@/entities/media/api/media-api";
 import { ApiClientError } from "@/shared/api/http";
 import { Button } from "@/shared/ui/button";
 
-type UsageDetails = { cases?: number; projectCovers?: number; profileAvatar?: number };
+type UsageDetails = { cases?: number; projectCovers?: number; profileAvatar?: number; experienceLogos?: number };
 
 function describeUsage(details: unknown): string {
   const d = (details ?? {}) as UsageDetails;
@@ -13,6 +13,7 @@ function describeUsage(details: unknown): string {
   if (d.cases) parts.push(`в кейсах: ${d.cases}`);
   if (d.projectCovers) parts.push(`в обложках проектов: ${d.projectCovers}`);
   if (d.profileAvatar) parts.push("в аватаре профиля");
+  if (d.experienceLogos) parts.push(`в логотипах опыта: ${d.experienceLogos}`);
   return parts.length > 0 ? parts.join(", ") : "в другом месте";
 }
 

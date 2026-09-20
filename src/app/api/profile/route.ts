@@ -12,7 +12,7 @@ export async function GET() {
       where: { id: 1 },
       include: {
         avatar: true,
-        experience: { orderBy: { order: "asc" } },
+        experience: { orderBy: { order: "asc" }, include: { logo: true } },
       },
     });
     return NextResponse.json(profile);
@@ -32,7 +32,7 @@ export async function PATCH(request: Request) {
       data: data as Prisma.ProfileUncheckedUpdateInput,
       include: {
         avatar: true,
-        experience: { orderBy: { order: "asc" } },
+        experience: { orderBy: { order: "asc" }, include: { logo: true } },
       },
     });
     return NextResponse.json(profile);
