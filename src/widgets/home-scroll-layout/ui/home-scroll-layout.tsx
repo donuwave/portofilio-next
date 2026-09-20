@@ -3,20 +3,23 @@
 import { useLayoutEffect, useRef } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { SplitText } from "gsap/SplitText";
 import type { Profile } from "@/entities/profile/model/types";
 import type { Project } from "@/entities/project/model/types";
 import { ProfilePhoto } from "@/entities/profile/ui/profile-photo";
 import { NAV_ITEMS } from "@/shared/config/nav-items";
 import { SOCIAL_LINKS } from "@/shared/config/social-links";
+import { TAGLINE_PHRASES } from "@/shared/config/tagline-phrases";
 import { pickLocalized } from "@/shared/lib/localized-text";
 import { useLenis } from "@/shared/lib/smooth-scroll-provider";
 import { splitName } from "@/shared/lib/split-name";
 import { NavLink } from "@/shared/ui/nav-link";
 import { ScribbleUnderline } from "@/shared/ui/scribble-underline";
+import { TypewriterText } from "@/shared/ui/typewriter-text";
 import { ExperienceTimeline } from "@/widgets/experience-timeline/ui/experience-timeline";
 import { ProjectsGrid } from "@/widgets/projects-grid/ui/projects-grid";
 
-gsap.registerPlugin(ScrollTrigger);
+gsap.registerPlugin(ScrollTrigger, SplitText);
 
 // Uppercase text renders "i" as a dotless capital I, swallowing the dot — this
 // stands two decorative dots back in above the first "ii" it finds. Each dot
@@ -103,6 +106,15 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
   // actually scrolled into view" needs to watch the padded content itself.
   const aboutHeadingRef = useRef<HTMLHeadingElement>(null);
 
+  // Stats block (heading + subtitle + the 3 metrics right below it) — a
+  // single cascading reveal played once, the first time it scrolls into
+  // view. aboutHeadingRef doubles as the split-text target; these cover the
+  // rest of the block.
+  const statsSubtitleRef = useRef<HTMLParagraphElement>(null);
+  const statsArrowRef = useRef<HTMLSpanElement>(null);
+  const statGroupRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const statNumberRefs = useRef<(HTMLParagraphElement | null)[]>([]);
+
   // Fixed hero chrome (top-left tag, bottom-left scroll hint) — has no final
   // counterpart anywhere in the sidebar, so it simply fades out as the hero
   // starts leaving, rather than travelling anywhere.
@@ -144,6 +156,11 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
       // callback's scope — can still reach them to remove the listener/ticker.
       let onDotsMouseMove: ((e: MouseEvent) => void) | null = null;
       let dotsTicker: (() => void) | null = null;
+      // SplitText mutates the DOM (wraps words in masking spans) — gsap.context's
+      // revert() only undoes animations/ScrollTriggers it created, not that DOM
+      // surgery, so this needs its own explicit revert() in cleanup below.
+      let headingSplit: SplitText | null = null;
+      let idleArrowWobble: gsap.core.Tween | null = null;
 
       const ctx = gsap.context(() => {
         // dasharray "1 3" (not just "1") gives the hidden gap phase 3x the
@@ -374,6 +391,114 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
           scrollTrigger: { trigger: leftColumnRef.current, start: "top 90%" },
         }).to(leftColumnRef.current, { autoAlpha: 1, y: 0, ease: "power2.out", duration: 0.6 });
 
+        // --- Stats block (heading + subtitle + the 3 metrics): one cascading
+        // timeline, played once the first time it scrolls into view (once:
+        // true — never replays on scroll back, unlike leftColumn/backToTop
+        // above). Heading words slide up out of a clip-mask, subtitle/arrow/
+        // each stat group fade up in a stagger, and the numbers "spin" up to
+        // their final value like an odometer instead of counting evenly. ---
+        headingSplit = aboutHeadingRef.current
+          ? SplitText.create(aboutHeadingRef.current, { type: "words", mask: "words" })
+          : null;
+
+        if (headingSplit) gsap.set(headingSplit.words, { yPercent: 110 });
+        gsap.set([statsSubtitleRef.current, ...statGroupRefs.current], { autoAlpha: 0, y: 24 });
+        if (statsArrowRef.current) {
+          gsap.set(statsArrowRef.current, { autoAlpha: 0, scale: 0.4, x: -8, y: 8 });
+        }
+
+        const STAT_TARGETS = [3, profile.skills.length, projects.length];
+        const STAT_SUFFIXES = ["+", "+", ""];
+        statNumberRefs.current.forEach((el, i) => {
+          if (el) el.textContent = `0${STAT_SUFFIXES[i]}`;
+        });
+
+        const statsTl = gsap.timeline({
+          scrollTrigger: { trigger: aboutHeadingRef.current, start: "top 85%", once: true },
+        });
+
+        const STAT_STAGGER = 0.12;
+        let statsCursor = 0;
+
+        if (headingSplit) {
+          statsTl.to(
+            headingSplit.words,
+            { yPercent: 0, duration: 0.7, ease: "power3.out", stagger: 0.05 },
+            statsCursor
+          );
+          statsCursor += 0.35; // next piece starts before the split finishes settling
+        }
+
+        statsTl.to(
+          statsSubtitleRef.current,
+          { autoAlpha: 1, y: 0, duration: 0.5, ease: "power2.out" },
+          statsCursor
+        );
+        statsCursor += STAT_STAGGER;
+
+        if (statsArrowRef.current) {
+          statsTl.to(
+            statsArrowRef.current,
+            { autoAlpha: 1, scale: 1, x: 0, y: 0, duration: 0.45, ease: "back.out(2.5)" },
+            statsCursor
+          );
+        }
+
+        const statGroupTimes: number[] = [];
+        statGroupRefs.current.forEach((el) => {
+          if (!el) return;
+          statGroupTimes.push(statsCursor);
+          statsTl.to(el, { autoAlpha: 1, y: 0, duration: 0.5, ease: "power2.out" }, statsCursor);
+          statsCursor += STAT_STAGGER;
+        });
+
+        // Fast/randomised digits while the tween is still cruising, settling
+        // onto the real (snapped) value only in its last stretch — combined
+        // with power2.out's own deceleration, that last stretch is also where
+        // the tween is visually slowing down, so the "lock-in" and the
+        // slow-down read as the same moment, like a slot machine settling.
+        statNumberRefs.current.forEach((el, i) => {
+          if (!el) return;
+          const target = STAT_TARGETS[i];
+          const suffix = STAT_SUFFIXES[i];
+          const proxy = { value: 0 };
+          statsTl.to(
+            proxy,
+            {
+              value: target,
+              duration: 1.1,
+              ease: "power2.out",
+              snap: { value: 1 },
+              onUpdate: function onUpdate() {
+                if (this.progress() < 0.7) {
+                  const spinMax = Math.max(target * 3, 20);
+                  el.textContent = `${Math.floor(Math.random() * spinMax)}${suffix}`;
+                } else {
+                  el.textContent = `${Math.round(proxy.value)}${suffix}`;
+                }
+              },
+            },
+            statGroupTimes[i] ?? statsCursor
+          );
+        });
+
+        // The arrow settles from its entrance overshoot into a small
+        // continuous diagonal wobble — created now (paused) so gsap.context
+        // tracks and reverts it, only started once the entrance has actually
+        // played.
+        if (statsArrowRef.current) {
+          idleArrowWobble = gsap.to(statsArrowRef.current, {
+            x: 4,
+            y: -4,
+            duration: 1.4,
+            ease: "sine.inOut",
+            repeat: -1,
+            yoyo: true,
+            paused: true,
+          });
+          statsTl.call(() => idleArrowWobble?.play());
+        }
+
         // "Back to top" fades in once the left column's content has actually
         // scrolled into view (watching the padded heading itself, not the
         // column's own top edge — see the comment on aboutHeadingRef) — well
@@ -531,11 +656,17 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
         ctx.revert();
         if (onDotsMouseMove) window.removeEventListener("mousemove", onDotsMouseMove);
         if (dotsTicker) gsap.ticker.remove(dotsTicker);
+        headingSplit?.revert();
+        idleArrowWobble?.kill();
       };
     });
 
     return () => mm.revert();
-  }, []);
+    // profile.skills.length/projects.length are the only prop values read
+    // inside this effect (for the stat targets) — everything else the effect
+    // touches is either a ref or module-scope config, so this pair is the
+    // full, accurate dependency list despite the effect's size.
+  }, [profile.skills.length, projects.length]);
 
   return (
     <div id="top" ref={sectionRef} className="lg:grid lg:grid-cols-2 lg:items-start">
@@ -559,7 +690,9 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
         <div className="flex h-full flex-col items-center justify-center gap-6 px-6 py-16 sm:px-12 lg:items-end lg:gap-3 lg:py-10">
           {/* Mobile-only static hero (no scroll animation below lg) */}
           <div className="flex flex-col items-center gap-6 lg:hidden">
-            <p className="font-hand text-2xl text-[#8a8378] sm:text-3xl">живые интерфейсы</p>
+            <p className="font-hand text-2xl text-[#8a8378] sm:text-3xl">
+              <TypewriterText phrases={TAGLINE_PHRASES} />
+            </p>
             <div className="flex min-w-0 items-end gap-3">
               <div className="min-w-0">
                 <h1 className="break-words font-display text-[13vw] uppercase leading-[0.85] tracking-tight sm:text-[10vw]">
@@ -585,7 +718,7 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
               <span className="inline-block" style={{ animation: "arrow-bounce 1.6s ease-in-out infinite" }}>
                 ↙
               </span>{" "}
-              живые интерфейсы
+              <TypewriterText phrases={TAGLINE_PHRASES} />
             </p>
             <h1
               ref={nameRef}
@@ -694,22 +827,60 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
             <br />
             <span className="text-[#e2451f]">которые работают</span>
           </h2>
-          <p className="mt-4 max-w-md text-[#b8b1a3]">
+          <p ref={statsSubtitleRef} className="mt-4 max-w-md text-[#b8b1a3]">
             Разрабатываю быстрые, аккуратные продукты — от идеи до продакшена.
           </p>
 
           <div className="mt-10 flex flex-wrap gap-x-12 gap-y-6">
-            <div>
-              <span className="font-hand text-xl text-[#e2451f]">↗</span>
-              <p className="font-display text-4xl text-[#ece5d6]">3+</p>
+            <div
+              ref={(el) => {
+                statGroupRefs.current[0] = el;
+              }}
+              className="relative"
+            >
+              {/* absolute — an in-flow arrow pushes "3+" a line below "10+"/"4",
+                  since only this first group has anything above its number. */}
+              <span ref={statsArrowRef} className="absolute -top-6 left-0 font-hand text-xl text-[#e2451f]">
+                ↗
+              </span>
+              <p
+                ref={(el) => {
+                  statNumberRefs.current[0] = el;
+                }}
+                className="font-display text-4xl text-[#ece5d6]"
+              >
+                3+
+              </p>
               <p className="text-xs tracking-[0.15em] text-[#8a8378]">ГОДА ОПЫТА</p>
             </div>
-            <div>
-              <p className="font-display text-4xl text-[#ece5d6]">{profile.skills.length}+</p>
+            <div
+              ref={(el) => {
+                statGroupRefs.current[1] = el;
+              }}
+            >
+              <p
+                ref={(el) => {
+                  statNumberRefs.current[1] = el;
+                }}
+                className="font-display text-4xl text-[#ece5d6]"
+              >
+                {profile.skills.length}+
+              </p>
               <p className="text-xs tracking-[0.15em] text-[#8a8378]">ТЕХНОЛОГИЙ</p>
             </div>
-            <div>
-              <p className="font-display text-4xl text-[#ece5d6]">{projects.length}</p>
+            <div
+              ref={(el) => {
+                statGroupRefs.current[2] = el;
+              }}
+            >
+              <p
+                ref={(el) => {
+                  statNumberRefs.current[2] = el;
+                }}
+                className="font-display text-4xl text-[#ece5d6]"
+              >
+                {projects.length}
+              </p>
               <p className="text-xs tracking-[0.15em] text-[#8a8378]">ПРОЕКТА</p>
             </div>
           </div>

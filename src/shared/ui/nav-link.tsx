@@ -23,7 +23,11 @@ function HoverUnderline() {
       // width, so any label shorter than that reads as if it had a huge
       // trailing gap before the next nav item. Taking it out of flow lets
       // the <a> size to the text alone; inset-x-0 then stretches it to match.
-      className="absolute inset-x-0 top-full mt-0.5 h-[0.5em]"
+      // Anchored to the <a>'s own bottom edge (see the matching pb-* on <a>)
+      // rather than top-full, so the reserved gap above it stays inside the
+      // <a>'s own hoverable box instead of being a dead strip between two
+      // separately-hoverable elements.
+      className="absolute inset-x-0 bottom-0 h-[0.5em]"
       aria-hidden="true">
       <path
         d="M1 6 L 15 2 L 29 8 L 43 3 L 57 7 L 71 2 L 85 8 L 99 3 L 119 6"
@@ -54,7 +58,16 @@ export function NavLink({ href, children, className = "" }: { href: string; chil
   }
 
   return (
-    <a href={href} onClick={handleClick} className={`group relative inline-block hover:text-[#ece5d6] ${className}`}>
+    <a
+      href={href}
+      onClick={handleClick}
+      // pb reserves the underline's own space (gap + height) inside the <a>'s
+      // own box, so that strip stays part of its hoverable area — without it,
+      // the absolutely positioned underline sits entirely outside the <a>'s
+      // box and the small gap above it becomes a dead zone neither element
+      // covers.
+      className={`group relative inline-block pb-[calc(0.5em+2px)] hover:text-[#ece5d6] ${className}`}
+    >
       <span>{children}</span>
       <HoverUnderline />
     </a>
