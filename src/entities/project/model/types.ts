@@ -1,0 +1,18 @@
+import type { LocalizedText } from "@/shared/lib/localized-text";
+import type { Case } from "@/entities/case/model/types";
+
+export type ProjectCover = {
+  path: string;
+} | null;
+
+export type Project = {
+  slug: string;
+  title: LocalizedText;
+  description: LocalizedText;
+  cover: ProjectCover;
+  techStack: string[];
+};
+
+export type ProjectDetail = Project & {
+  cases: Case[];
+};
