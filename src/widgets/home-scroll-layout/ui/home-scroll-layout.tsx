@@ -161,10 +161,20 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
       let ctx: gsap.Context | null = null;
       let cancelled = false;
       let transitioning = false;
-      let navigationRequested = false;
+      // Assigned by setup() once the hero timeline exists. Lets this listener —
+      // which lives out here so cleanup can still reach it — hand a nav click
+      // over to the hero transition; returns true when it takes the click.
+      let heroNavigate: ((href: string) => boolean) | null = null;
       const onAnchorClick = (event: MouseEvent) => {
         const link = event.target instanceof Element ? event.target.closest("a[href^='#']") : null;
-        if (link) navigationRequested = link.getAttribute("href") !== "#top";
+        const href = link?.getAttribute("href");
+        if (!href || !heroNavigate?.(href)) return;
+        // NavLink's own onClick fires its lenis.scrollTo immediately after this
+        // and would override the transition's scroll mid-flight. Stopping
+        // propagation here in the capture phase keeps that bubble-phase React
+        // handler from running at all.
+        event.preventDefault();
+        event.stopPropagation();
       };
       sectionRef.current?.addEventListener("click", onAnchorClick, true);
       const transitionRoot = sectionRef.current;
@@ -355,19 +365,63 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
           tl.to(el, { x: 0, y: 0, ease: "power2.out", duration: 0.4 }, LINE_DRAWN + 0.06 + i * 0.1);
         });
 
+        // Going back is its own timeline rather than tl.reverse(). The forward
+        // pass is stacked so the name and photo *finish* first — they're the
+        // pieces that settle fastest — which on reverse means they only start
+        // moving once the tail of everything else has played out, and the page
+        // slides back while the sidebar still sits there. This mirrors the
+        // forward pass instead: every piece starts travelling at once, so
+        // coming back reads at the same pace as going in. Its targets are the
+        // hero frame each piece is sitting in right now, read back rather than
+        // restated, so there's still only one definition of that layout.
+        const heroOf = (el: Element | null, props: string[]): gsap.TweenVars =>
+          el ? Object.fromEntries(props.map((p) => [p, gsap.getProperty(el, p, "px")])) : {};
+
+        const backTl = gsap.timeline({ paused: true });
+        backTl
+          // Sidebar-only text has nowhere to travel, so it just clears out.
+          .to([descRef.current, emailRef.current], { autoAlpha: 0, y: 16, duration: 0.2 }, 0)
+          .to(nameRef.current, { ...heroOf(nameRef.current, ["x", "y", "fontSize"]), ease: "power2.out", duration: 0.5 }, 0.02)
+          .to(surnameRef.current, { ...heroOf(surnameRef.current, ["x", "y", "fontSize"]), ease: "power2.out", duration: 0.5 }, 0.06)
+          .to(underlineWrapRef.current, { ...heroOf(underlineWrapRef.current, ["x", "y", "width"]), ease: "power2.out", duration: 0.5 }, 0.04)
+          .to(photoRef.current, { ...heroOf(photoRef.current, ["x", "y", "width", "height"]), ease: "power2.out", duration: 0.5 }, 0.05)
+          // Furthest to travel of anything — back out to the bottom-right corner.
+          .to(socialRef.current, { ...heroOf(socialRef.current, ["x", "y"]), ease: "power2.out", duration: 0.65 }, 0.02)
+          // Hero-only chrome fades back in behind the travel, once there's
+          // something recognisable for it to belong to.
+          .to(taglineRef.current, { ...heroOf(taglineRef.current, ["x", "y"]), autoAlpha: 1, duration: 0.25 }, 0.4)
+          .to([tagRef.current, scrollHintRef.current], { autoAlpha: 1, duration: 0.3 }, 0.45);
+
+        navItems.forEach((el, i) => {
+          backTl.to(el, { ...heroOf(el, ["x", "y"]), ease: "power2.out", duration: 0.4 }, 0.04 + i * 0.07);
+        });
+
         let assembled = false;
+        // A nav link clicked while a transition is already running.
+        let pendingHref: string | null = null;
         const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
         const contentTop = () => {
           const label = aboutHeadingRef.current?.previousElementSibling;
           return Math.max(0, (label?.getBoundingClientRect().top ?? 0) + window.scrollY - 96);
         };
         const duration = reducedMotion ? 0 : 1.1;
-        const movePage = (target: number, onComplete: () => void) => {
+        // A nav click is a request to *get somewhere*, not to watch the
+        // transition — same choreography, roughly twice the pace.
+        const navDuration = duration / 2;
+        // How much scroll draws the underline — and with it, where the hero
+        // region ends: past this point the assembly has taken over.
+        const drawRange = () => window.innerHeight * 0.22;
+        // Coming back up lands just short of that point instead of at the very
+        // top, so the line reads as already drawn and replaying the assembly is
+        // one short scroll away rather than a full redraw from scratch. The
+        // hero itself is pinned, so this looks identical to sitting at scroll 0.
+        const heroReturnScroll = () => drawRange() * 0.92;
+        const movePage = (target: number, onComplete: () => void, span = duration) => {
           scrollTween?.kill();
           const lenis = lenisRef?.current;
           if (lenis) {
             lenis.scrollTo(target, {
-              duration,
+              duration: span,
               immediate: reducedMotion,
               lock: true,
               force: true,
@@ -377,7 +431,7 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
           } else {
             const position = { y: window.scrollY };
             scrollTween = gsap.to(position, {
-              y: target, duration, ease: "power2.out",
+              y: target, duration: span, ease: "power2.out",
               onUpdate: () => window.scrollTo(0, position.y),
               onComplete,
             });
@@ -387,8 +441,7 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
           if (assembled || transitioning || cancelled) return;
           assembled = true;
           const target = contentTop();
-          // A direct link to projects/contact must keep its own destination.
-          if (navigationRequested || window.scrollY >= target - 8) {
+          if (window.scrollY >= target - 8) {
             tl.progress(1).pause();
             return;
           }
@@ -397,18 +450,94 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
           else tl.timeScale(tl.duration() / duration).play(0);
           movePage(target, () => { transitioning = false; });
         };
-        const returnToHero = () => {
+        // `target` is where the page itself should end up: the near-drawn
+        // landing point for ordinary upward scrolling, or the very top when
+        // that's what was actually asked for (the back-to-top link).
+        const returnToHero = (target = heroReturnScroll()) => {
           if (!assembled || transitioning || cancelled) return;
           transitioning = true;
-          navigationRequested = false;
-          if (reducedMotion) tl.pause(0);
-          else tl.timeScale(tl.duration() / duration).reverse();
-          movePage(0, () => {
+          // invalidate() re-reads each piece's current position, so an
+          // interrupted transition travels from where it actually is.
+          if (!reducedMotion) backTl.invalidate().timeScale(backTl.duration() / duration).play(0);
+          // The underline stays on its own scrub, which follows the scroll
+          // position — so it's the last thing to visibly move, landing either
+          // near-complete or fully undrawn depending on the target.
+          movePage(target, () => {
             tl.pause(0);
+            backTl.pause();
             assembled = false;
             transitioning = false;
+            flushPendingNav();
           });
         };
+        // A nav click from the hero has no scroll gesture behind it, so nothing
+        // has drawn the line or started the assembly. Left alone it scrolls the
+        // full-size hero name up the page and only then snaps it into the
+        // sidebar, so instead: draw the line, run the assembly, and only then
+        // travel on to the section the link actually points at.
+        const runHeroNavigate = (href: string) => {
+          if (cancelled) return false;
+          if (href === "#top") {
+            // "Наверх" means the actual top of the page — not the landing point
+            // that keeps the underline drawn ready for another run. Handled here
+            // rather than left to the link so it animates back like any other
+            // return instead of racing this transition with its own scroll.
+            if (!assembled || transitioning) return false;
+            returnToHero(0);
+            return true;
+          }
+          if (transitioning) {
+            // Mid-transition the nav is still flying into place. Swallow the
+            // click rather than let a second scroll fight this one, and honour
+            // it once we've landed.
+            pendingHref = href;
+            return true;
+          }
+          if (assembled) return false;
+          assembled = true;
+          transitioning = true;
+          // The scrub owns dashoffset from scroll position alone, so left
+          // enabled it would undraw the line and redraw it again as movePage
+          // scrolls the page down. It goes back on once we've arrived, where
+          // scroll is past the range's end and it agrees with what's on screen.
+          const scrub = underlineTrigger.scrollTrigger;
+          scrub?.disable(false);
+          const runAssembly = () => {
+            if (cancelled) return;
+            if (reducedMotion) tl.progress(1).pause();
+            else tl.timeScale(tl.duration() / navDuration).play(0);
+            movePage(contentTop(), () => {
+              scrub?.enable();
+              transitioning = false;
+              const target = document.querySelector(href);
+              // "Обо мне" points at the very content the assembly already
+              // landed on; a second scroll there would be a pointless nudge.
+              if (target && Math.abs(target.getBoundingClientRect().top) > 160) {
+                lenisRef?.current?.scrollTo(href);
+              }
+              flushPendingNav();
+            }, navDuration);
+          };
+          if (reducedMotion) {
+            gsap.set(underlinePathRef.current, { attr: { "stroke-dashoffset": 0 } });
+            runAssembly();
+          } else {
+            gsap.to(underlinePathRef.current, {
+              attr: { "stroke-dashoffset": 0 },
+              ease: "power2.out",
+              duration: 0.22,
+              onComplete: runAssembly,
+            });
+          }
+          return true;
+        };
+        heroNavigate = runHeroNavigate;
+        function flushPendingNav() {
+          const href = pendingHref;
+          pendingHref = null;
+          if (!href) return;
+          if (!runHeroNavigate(href)) lenisRef?.current?.scrollTo(href);
+        }
         // A small dead zone below the landing point prevents a refresh or
         // subpixel rounding from immediately reversing the forward transition.
         // Ordinary upward scrolling inside the content remains untouched.
@@ -416,22 +545,24 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
           trigger: sectionRef.current,
           start: () => Math.max(1, contentTop() - 16),
           end: "+=1",
-          onLeaveBack: returnToHero,
+          // Wrapped, not passed directly: ScrollTrigger hands the callback its
+          // own instance, which would land in returnToHero's target argument.
+          onLeaveBack: () => returnToHero(),
         });
-        gsap.to(underlinePathRef.current, {
+        const underlineTrigger = gsap.to(underlinePathRef.current, {
           attr: { "stroke-dashoffset": 0 },
           ease: "none",
           onComplete: assemble,
           scrollTrigger: {
             trigger: sectionRef.current,
             start: "top top",
-            end: () => `+=${window.innerHeight * 0.22}`,
+            end: () => `+=${drawRange()}`,
             scrub: reducedMotion ? true : 0.15,
             onUpdate: (self) => {
-              // Returning fully to the hero re-arms the next transition.
+              // Scrolling manually all the way to the very top (the back-to-top
+              // link, Home key) also re-arms the next transition.
               if (self.scroll() <= 1 && assembled && !transitioning) {
                 assembled = false;
-                navigationRequested = false;
                 tl.pause(0);
               }
             },
@@ -618,7 +749,10 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
           // also kill the hop itself.
           ScrollTrigger.create({
             trigger: sectionRef.current,
-            start: "top top",
+            // The whole underline-draw range still *is* the hero — including the
+            // point coming back up lands on — so the repel stays live across it
+            // instead of dying one pixel below the top.
+            start: () => drawRange(),
             end: "+=1",
             onLeave: () => {
               // Set the flag first, then hand the reset to 0 back to the
