@@ -27,6 +27,14 @@
    native smooth-scroll while it's still mid-animation, which is what made
    nav clicks feel unresponsive until Lenis happened to settle first. */
 
+/* Keep animated content inside the viewport horizontally. Unlike hidden,
+   clip leaves overflow-y visible and does not create another scroll container
+   on body while translated content temporarily extends below its bounds. */
+html,
+body {
+  overflow-x: clip;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);

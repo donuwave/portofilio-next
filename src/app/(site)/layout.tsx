@@ -15,7 +15,9 @@ const handFont = Neucha({
 
 export default function SiteLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className={`${displayFont.variable} ${handFont.variable} min-h-screen overflow-x-hidden bg-[#141312] text-[#ece5d6] selection:bg-[#e2451f] selection:text-[#141312]`}>
+    // Clip horizontal animation overflow without creating a nested scroller.
+    // hidden + visible computes to hidden + auto; clip keeps Y visible.
+    <div className={`${displayFont.variable} ${handFont.variable} min-h-screen overflow-x-clip overflow-y-visible bg-[#141312] text-[#ece5d6] selection:bg-[#e2451f] selection:text-[#141312]`}>
       <SmoothScrollProvider>{children}</SmoothScrollProvider>
     </div>
   );

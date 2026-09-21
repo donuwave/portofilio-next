@@ -15,6 +15,7 @@ import { useLenis } from "@/shared/lib/smooth-scroll-provider";
 import { splitName } from "@/shared/lib/split-name";
 import { NavLink } from "@/shared/ui/nav-link";
 import { ScribbleUnderline } from "@/shared/ui/scribble-underline";
+import { SectionLabel } from "@/shared/ui/section-label";
 import { TypewriterText } from "@/shared/ui/typewriter-text";
 import { ExperienceTimeline } from "@/widgets/experience-timeline/ui/experience-timeline";
 import { ProjectsGrid } from "@/widgets/projects-grid/ui/projects-grid";
@@ -111,9 +112,6 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
   // view. aboutHeadingRef doubles as the split-text target; these cover the
   // rest of the block.
   const statsSubtitleRef = useRef<HTMLParagraphElement>(null);
-  const statsArrowRef = useRef<HTMLSpanElement>(null);
-  const statGroupRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const statNumberRefs = useRef<(HTMLParagraphElement | null)[]>([]);
 
   // Fixed hero chrome (top-left tag, bottom-left scroll hint) — has no final
   // counterpart anywhere in the sidebar, so it simply fades out as the hero
@@ -160,9 +158,21 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
       // revert() only undoes animations/ScrollTriggers it created, not that DOM
       // surgery, so this needs its own explicit revert() in cleanup below.
       let headingSplit: SplitText | null = null;
-      let idleArrowWobble: gsap.core.Tween | null = null;
+      let ctx: gsap.Context | null = null;
+      let cancelled = false;
+      let transitioning = false;
+      let navigationRequested = false;
+      const onAnchorClick = (event: MouseEvent) => {
+        const link = event.target instanceof Element ? event.target.closest("a[href^='#']") : null;
+        if (link) navigationRequested = link.getAttribute("href") !== "#top";
+      };
+      sectionRef.current?.addEventListener("click", onAnchorClick, true);
+      const transitionRoot = sectionRef.current;
+      let scrollTween: gsap.core.Tween | null = null;
 
-      const ctx = gsap.context(() => {
+      function setup() {
+        if (cancelled) return;
+        ctx = gsap.context(() => {
         // dasharray "1 3" (not just "1") gives the hidden gap phase 3x the
         // buffer instead of sitting exactly on the dash/gap boundary — with a
         // single-length dasharray, dashoffset:1 sits precisely at the edge of
@@ -305,28 +315,12 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
         // first visible frame is already the finished hero arrangement.
         gsap.set([sidebarRef.current, tagRef.current, scrollHintRef.current], { autoAlpha: 1 });
 
-        const tl = gsap.timeline({
-          scrollTrigger: {
-            trigger: sectionRef.current,
-            start: "top top",
-            end: "+=130%",
-            // A lighter scrub lag than before — Lenis already smooths the raw
-            // scroll input, so stacking a full 1s GSAP catch-up on top of that
-            // made fast-resizing pieces (the photo especially) visibly wobble/
-            // overshoot instead of tracking the scroll directly.
-            scrub: 0.3,
-          },
-        });
+        // The scroll gesture only draws the underline. Once complete, the
+        // assembly runs on its own clock, independent of further wheel input.
+        const tl = gsap.timeline({ paused: true });
+        const LINE_DRAWN = 0;
 
-        // The underline draws in completely on its own first — nothing else
-        // starts moving until it's fully drawn. Every other tween below is
-        // scheduled at LINE_DRAWN-or-later, so this single constant gates the
-        // whole timeline; a bigger value gives the draw more room to read as
-        // its own deliberate beat before anything starts travelling.
-        const LINE_DRAWN = 0.32;
-
-        tl.to(underlinePathRef.current, { attr: { "stroke-dashoffset": 0 }, ease: "none", duration: LINE_DRAWN }, 0)
-          .to(taglineRef.current, { autoAlpha: 0, y: "-=20", duration: 0.15 }, LINE_DRAWN)
+        tl          .to(taglineRef.current, { autoAlpha: 0, y: "-=20", duration: 0.15 }, LINE_DRAWN)
           // Fixed hero chrome (top-left tag, bottom-left scroll hint) has nowhere
           // to travel to, so it just fades out as the hero starts leaving.
           .to([tagRef.current, scrollHintRef.current], { autoAlpha: 0, duration: 0.2 }, LINE_DRAWN)
@@ -361,6 +355,89 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
           tl.to(el, { x: 0, y: 0, ease: "power2.out", duration: 0.4 }, LINE_DRAWN + 0.06 + i * 0.1);
         });
 
+        let assembled = false;
+        const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        const contentTop = () => {
+          const label = aboutHeadingRef.current?.previousElementSibling;
+          return Math.max(0, (label?.getBoundingClientRect().top ?? 0) + window.scrollY - 96);
+        };
+        const duration = reducedMotion ? 0 : 1.1;
+        const movePage = (target: number, onComplete: () => void) => {
+          scrollTween?.kill();
+          const lenis = lenisRef?.current;
+          if (lenis) {
+            lenis.scrollTo(target, {
+              duration,
+              immediate: reducedMotion,
+              lock: true,
+              force: true,
+              easing: (t: number) => 1 - Math.pow(1 - t, 3),
+              onComplete,
+            });
+          } else {
+            const position = { y: window.scrollY };
+            scrollTween = gsap.to(position, {
+              y: target, duration, ease: "power2.out",
+              onUpdate: () => window.scrollTo(0, position.y),
+              onComplete,
+            });
+          }
+        };
+        const assemble = () => {
+          if (assembled || transitioning || cancelled) return;
+          assembled = true;
+          const target = contentTop();
+          // A direct link to projects/contact must keep its own destination.
+          if (navigationRequested || window.scrollY >= target - 8) {
+            tl.progress(1).pause();
+            return;
+          }
+          transitioning = true;
+          if (reducedMotion) tl.progress(1).pause();
+          else tl.timeScale(tl.duration() / duration).play(0);
+          movePage(target, () => { transitioning = false; });
+        };
+        const returnToHero = () => {
+          if (!assembled || transitioning || cancelled) return;
+          transitioning = true;
+          navigationRequested = false;
+          if (reducedMotion) tl.pause(0);
+          else tl.timeScale(tl.duration() / duration).reverse();
+          movePage(0, () => {
+            tl.pause(0);
+            assembled = false;
+            transitioning = false;
+          });
+        };
+        // A small dead zone below the landing point prevents a refresh or
+        // subpixel rounding from immediately reversing the forward transition.
+        // Ordinary upward scrolling inside the content remains untouched.
+        ScrollTrigger.create({
+          trigger: sectionRef.current,
+          start: () => Math.max(1, contentTop() - 16),
+          end: "+=1",
+          onLeaveBack: returnToHero,
+        });
+        gsap.to(underlinePathRef.current, {
+          attr: { "stroke-dashoffset": 0 },
+          ease: "none",
+          onComplete: assemble,
+          scrollTrigger: {
+            trigger: sectionRef.current,
+            start: "top top",
+            end: () => `+=${window.innerHeight * 0.22}`,
+            scrub: reducedMotion ? true : 0.15,
+            onUpdate: (self) => {
+              // Returning fully to the hero re-arms the next transition.
+              if (self.scroll() <= 1 && assembled && !transitioning) {
+                assembled = false;
+                navigationRequested = false;
+                tl.pause(0);
+              }
+            },
+          },
+        });
+
         ScrollTrigger.create({
           trigger: sectionRef.current,
           start: "top top",
@@ -381,43 +458,27 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
         } else {
           window.addEventListener("load", refresh, { once: true });
         }
-        document.fonts?.ready?.then(refresh);
 
         // Left column (headline/stats/about/projects) is a normal scrolling column
         // that starts below the hero's settle point — its own light, non-scrubbed
         // reveal fires once when it naturally scrolls into view.
-        gsap.set(leftColumnRef.current, { autoAlpha: 0, y: 30 });
+        gsap.set(leftColumnRef.current, { autoAlpha: 0 });
         gsap.timeline({
-          scrollTrigger: { trigger: leftColumnRef.current, start: "top 90%" },
-        }).to(leftColumnRef.current, { autoAlpha: 1, y: 0, ease: "power2.out", duration: 0.6 });
+          scrollTrigger: { trigger: aboutHeadingRef.current, start: "top 95%", once: true },
+        }).to(leftColumnRef.current, { autoAlpha: 1, ease: "power2.out", duration: 0.6 });
 
-        // --- Stats block (heading + subtitle + the 3 metrics): one cascading
-        // timeline, played once the first time it scrolls into view (once:
-        // true — never replays on scroll back, unlike leftColumn/backToTop
-        // above). Heading words slide up out of a clip-mask, subtitle/arrow/
-        // each stat group fade up in a stagger, and the numbers "spin" up to
-        // their final value like an odometer instead of counting evenly. ---
+        // Heading and subtitle enter together; AboutStats owns the metrics animation.
         headingSplit = aboutHeadingRef.current
           ? SplitText.create(aboutHeadingRef.current, { type: "words", mask: "words" })
           : null;
 
         if (headingSplit) gsap.set(headingSplit.words, { yPercent: 110 });
-        gsap.set([statsSubtitleRef.current, ...statGroupRefs.current], { autoAlpha: 0, y: 24 });
-        if (statsArrowRef.current) {
-          gsap.set(statsArrowRef.current, { autoAlpha: 0, scale: 0.4, x: -8, y: 8 });
-        }
-
-        const STAT_TARGETS = [3, profile.skills.length, projects.length];
-        const STAT_SUFFIXES = ["+", "+", ""];
-        statNumberRefs.current.forEach((el, i) => {
-          if (el) el.textContent = `0${STAT_SUFFIXES[i]}`;
-        });
+        gsap.set(statsSubtitleRef.current, { autoAlpha: 0, y: 24 });
 
         const statsTl = gsap.timeline({
           scrollTrigger: { trigger: aboutHeadingRef.current, start: "top 85%", once: true },
         });
 
-        const STAT_STAGGER = 0.12;
         let statsCursor = 0;
 
         if (headingSplit) {
@@ -434,71 +495,6 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
           { autoAlpha: 1, y: 0, duration: 0.5, ease: "power2.out" },
           statsCursor
         );
-        statsCursor += STAT_STAGGER;
-
-        if (statsArrowRef.current) {
-          statsTl.to(
-            statsArrowRef.current,
-            { autoAlpha: 1, scale: 1, x: 0, y: 0, duration: 0.45, ease: "back.out(2.5)" },
-            statsCursor
-          );
-        }
-
-        const statGroupTimes: number[] = [];
-        statGroupRefs.current.forEach((el) => {
-          if (!el) return;
-          statGroupTimes.push(statsCursor);
-          statsTl.to(el, { autoAlpha: 1, y: 0, duration: 0.5, ease: "power2.out" }, statsCursor);
-          statsCursor += STAT_STAGGER;
-        });
-
-        // Fast/randomised digits while the tween is still cruising, settling
-        // onto the real (snapped) value only in its last stretch — combined
-        // with power2.out's own deceleration, that last stretch is also where
-        // the tween is visually slowing down, so the "lock-in" and the
-        // slow-down read as the same moment, like a slot machine settling.
-        statNumberRefs.current.forEach((el, i) => {
-          if (!el) return;
-          const target = STAT_TARGETS[i];
-          const suffix = STAT_SUFFIXES[i];
-          const proxy = { value: 0 };
-          statsTl.to(
-            proxy,
-            {
-              value: target,
-              duration: 1.1,
-              ease: "power2.out",
-              snap: { value: 1 },
-              onUpdate: function onUpdate() {
-                if (this.progress() < 0.7) {
-                  const spinMax = Math.max(target * 3, 20);
-                  el.textContent = `${Math.floor(Math.random() * spinMax)}${suffix}`;
-                } else {
-                  el.textContent = `${Math.round(proxy.value)}${suffix}`;
-                }
-              },
-            },
-            statGroupTimes[i] ?? statsCursor
-          );
-        });
-
-        // The arrow settles from its entrance overshoot into a small
-        // continuous diagonal wobble — created now (paused) so gsap.context
-        // tracks and reverts it, only started once the entrance has actually
-        // played.
-        if (statsArrowRef.current) {
-          idleArrowWobble = gsap.to(statsArrowRef.current, {
-            x: 4,
-            y: -4,
-            duration: 1.4,
-            ease: "sine.inOut",
-            repeat: -1,
-            yoyo: true,
-            paused: true,
-          });
-          statsTl.call(() => idleArrowWobble?.play());
-        }
-
         // "Back to top" fades in once the left column's content has actually
         // scrolled into view (watching the padded heading itself, not the
         // column's own top edge — see the comment on aboutHeadingRef) — well
@@ -650,14 +646,38 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
 
           leapfrogTl.play();
         }
-      }, sectionRef);
+        }, sectionRef);
+      }
+
+      // Every measurement above (name/surname widths, underline sizing, nav
+      // item positions, the pin's own "bottom bottom" end) is only correct
+      // once the real custom fonts (Unbounded/Neucha, not the fallback
+      // they're swapped in for) are what's actually rendered — otherwise
+      // this runs once against fallback-font metrics, and the later
+      // ScrollTrigger.refresh() below has to visibly correct the page's
+      // height/positions once the real font swaps in, which is what read as
+      // a jerk + the scrollbar jumping right after load (worse the more
+      // text there is to reflow, e.g. after the About bio got longer).
+      // Everything's already hidden via lg:invisible in the JSX until this
+      // runs, so waiting here costs nothing visible — it just guarantees a
+      // single, correct measurement pass instead of a visible correction.
+      if (document.fonts?.status === "loaded") {
+        setup();
+      } else if (document.fonts?.ready) {
+        document.fonts.ready.then(setup);
+      } else {
+        setup();
+      }
 
       return () => {
-        ctx.revert();
+        cancelled = true;
+        transitionRoot?.removeEventListener("click", onAnchorClick, true);
+        scrollTween?.kill();
+        if (transitioning) lenisRef?.current?.start();
+        ctx?.revert();
         if (onDotsMouseMove) window.removeEventListener("mousemove", onDotsMouseMove);
         if (dotsTicker) gsap.ticker.remove(dotsTicker);
         headingSplit?.revert();
-        idleArrowWobble?.kill();
       };
     });
 
@@ -666,7 +686,7 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
     // inside this effect (for the stat targets) — everything else the effect
     // touches is either a ref or module-scope config, so this pair is the
     // full, accurate dependency list despite the effect's size.
-  }, [profile.skills.length, projects.length]);
+  }, [profile.skills.length, projects.length, lenisRef]);
 
   return (
     <div id="top" ref={sectionRef} className="lg:grid lg:grid-cols-2 lg:items-start">
@@ -822,7 +842,12 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
             element's own position), so an #about anchor jump there would land
             back at the hero instead of at the actual visible content. */}
         <section className="border-t border-[#2a2824] px-6 py-24 sm:px-12 lg:border-t-0 lg:pt-[130vh]">
-          <h2 id="about" ref={aboutHeadingRef} className="font-display text-4xl leading-[1.05] text-[#ece5d6] sm:text-5xl">
+          <SectionLabel>ОБО МНЕ</SectionLabel>
+          <h2
+            id="about"
+            ref={aboutHeadingRef}
+            className="mt-6 font-display text-4xl leading-[1.05] text-[#ece5d6] sm:text-5xl"
+          >
             Создаю интерфейсы,
             <br />
             <span className="text-[#e2451f]">которые работают</span>
@@ -831,65 +856,17 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
             Разрабатываю быстрые, аккуратные продукты — от идеи до продакшена.
           </p>
 
-          <div className="mt-10 flex flex-wrap gap-x-12 gap-y-6">
-            <div
-              ref={(el) => {
-                statGroupRefs.current[0] = el;
-              }}
-              className="relative"
-            >
-              {/* absolute — an in-flow arrow pushes "3+" a line below "10+"/"4",
-                  since only this first group has anything above its number. */}
-              <span ref={statsArrowRef} className="absolute -top-6 left-0 font-hand text-xl text-[#e2451f]">
-                ↗
-              </span>
-              <p
-                ref={(el) => {
-                  statNumberRefs.current[0] = el;
-                }}
-                className="font-display text-4xl text-[#ece5d6]"
-              >
-                3+
-              </p>
-              <p className="text-xs tracking-[0.15em] text-[#8a8378]">ГОДА ОПЫТА</p>
-            </div>
-            <div
-              ref={(el) => {
-                statGroupRefs.current[1] = el;
-              }}
-            >
-              <p
-                ref={(el) => {
-                  statNumberRefs.current[1] = el;
-                }}
-                className="font-display text-4xl text-[#ece5d6]"
-              >
-                {profile.skills.length}+
-              </p>
-              <p className="text-xs tracking-[0.15em] text-[#8a8378]">ТЕХНОЛОГИЙ</p>
-            </div>
-            <div
-              ref={(el) => {
-                statGroupRefs.current[2] = el;
-              }}
-            >
-              <p
-                ref={(el) => {
-                  statNumberRefs.current[2] = el;
-                }}
-                className="font-display text-4xl text-[#ece5d6]"
-              >
-                {projects.length}
-              </p>
-              <p className="text-xs tracking-[0.15em] text-[#8a8378]">ПРОЕКТА</p>
-            </div>
-          </div>
+          {/* AboutStats ("Опыт разработки" card) removed for now — user didn't
+              like how it looked; widget file kept as-is in case it comes back. */}
 
           <div className="mt-16 border-t border-[#2a2824] pt-16">
-            <p className="text-xs tracking-[0.25em] text-[#8a8378]">ОБО МНЕ</p>
-            <p className="mt-6 max-w-xl text-3xl leading-[1.15] text-[#ece5d6] sm:text-4xl">{about}</p>
+            <div className="max-w-xl space-y-4 text-3xl leading-[1.15] text-[#ece5d6] sm:text-4xl">
+              {about.split(/\n{2,}/).map((paragraph, i) => (
+                <p key={i}>{paragraph}</p>
+              ))}
+            </div>
             {profile.skills.length > 0 && (
-              <div className="mt-6 flex flex-wrap gap-2">
+              <div id="skills" className="mt-6 flex flex-wrap gap-2">
                 {profile.skills.map((skill) => (
                   <span
                     key={skill}
@@ -905,7 +882,7 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
 
         {profile.experience.length > 0 && (
           <section id="experience" className="border-t border-[#2a2824] px-6 py-24 sm:px-12">
-            <p className="text-xs tracking-[0.25em] text-[#8a8378]">ОПЫТ</p>
+            <SectionLabel>ОПЫТ</SectionLabel>
             <h2 className="mt-6 font-display text-3xl text-[#ece5d6] sm:text-4xl">Мой путь</h2>
             <ExperienceTimeline items={profile.experience} />
           </section>

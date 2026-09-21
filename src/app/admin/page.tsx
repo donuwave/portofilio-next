@@ -11,12 +11,21 @@ export default function AdminDashboardPage() {
           </Link>
         </li>
         <li>
+          <Link href="/admin/experience" className="underline">
+            Опыт
+          </Link>
+        </li>
+        <li>
+          <Link href="/admin/projects" className="underline">
+            Проекты
+          </Link>
+        </li>
+        <li>
           <Link href="/admin/files" className="underline">
             Файлы
           </Link>
         </li>
       </ul>
-      <p className="mt-4 text-sm text-zinc-500">Раздел «Проекты» появится на следующем этапе.</p>
     </div>
   );
 }

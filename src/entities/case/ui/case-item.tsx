@@ -1,5 +1,6 @@
 import { pickLocalized } from "@/shared/lib/localized-text";
 import type { Case } from "../model/types";
+import { CaseMediaCarousel } from "./case-media-carousel";
 
 export function CaseItem({ item }: { item: Case }) {
   const title = pickLocalized(item.title);
@@ -12,15 +13,8 @@ export function CaseItem({ item }: { item: Case }) {
         <p className="mt-3 max-w-xl text-[#b8b1a3]">{description}</p>
       </div>
       {item.media.length > 0 && (
-        <div className="mt-10 space-y-4">
-          {item.media.map((media) =>
-            media.type === "image" ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img key={media.id} src={media.path} alt={title} className="h-screen w-full object-cover" />
-            ) : (
-              <video key={media.id} src={media.path} controls className="h-screen w-full object-cover" />
-            )
-          )}
+        <div className="mt-10">
+          <CaseMediaCarousel media={item.media} title={title} />
         </div>
       )}
     </article>

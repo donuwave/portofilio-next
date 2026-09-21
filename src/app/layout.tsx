@@ -23,6 +23,27 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
+      <head>
+        {/* Runs synchronously, before the browser applies its own scroll
+            restoration on reload/back-forward — without this, reloading
+            while scrolled down (e.g. near the bottom of the pinned hero
+            section) lands the browser at that old scroll position before
+            any of our own JS has run. The hero's own setup then always
+            establishes elements' *scroll=0* positions unconditionally
+            (gsap.set, not scroll-aware), so ScrollTrigger's scrubbed
+            timeline — which does account for the real scroll position —
+            has to visibly ease everything from that wrong starting point
+            to the correct one once it catches up, which is what read as
+            the whole page "animating up" right after a reload. Forcing
+            scrollRestoration to manual (and starting every load at the
+            top) means there's only ever one, already-correct position to
+            render from. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{if('scrollRestoration' in history){history.scrollRestoration='manual';}window.scrollTo(0,0);}catch(e){}`,
+          }}
+        />
+      </head>
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );
