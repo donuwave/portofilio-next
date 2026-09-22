@@ -416,7 +416,10 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
         // one short scroll away rather than a full redraw from scratch. The
         // hero itself is pinned, so this looks identical to sitting at scroll 0.
         const heroReturnScroll = () => drawRange() * 0.92;
-        const movePage = (target: number, onComplete: () => void, span = duration) => {
+        // A selector target is resolved by Lenis itself, so a nav destination
+        // lands in exactly the same place whether the hero transition took the
+        // click over or an ordinary link handled it.
+        const movePage = (target: number | string, onComplete: () => void, span = duration) => {
           scrollTween?.kill();
           const lenis = lenisRef?.current;
           if (lenis) {
@@ -429,9 +432,13 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
               onComplete,
             });
           } else {
+            const resolved =
+              typeof target === "number"
+                ? target
+                : (document.querySelector(target)?.getBoundingClientRect().top ?? 0) + window.scrollY;
             const position = { y: window.scrollY };
             scrollTween = gsap.to(position, {
-              y: target, duration: span, ease: "power2.out",
+              y: resolved, duration: span, ease: "power2.out",
               onUpdate: () => window.scrollTo(0, position.y),
               onComplete,
             });
@@ -506,17 +513,29 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
             if (cancelled) return;
             if (reducedMotion) tl.progress(1).pause();
             else tl.timeScale(tl.duration() / navDuration).play(0);
-            movePage(contentTop(), () => {
-              scrub?.enable();
-              transitioning = false;
-              const target = document.querySelector(href);
-              // "Обо мне" points at the very content the assembly already
-              // landed on; a second scroll there would be a pointless nudge.
-              if (target && Math.abs(target.getBoundingClientRect().top) > 160) {
-                lenisRef?.current?.scrollTo(href);
-              }
-              flushPendingNav();
-            }, navDuration);
+            // One continuous move all the way to the section. Landing on the
+            // content first and setting off again put a dead stop between the
+            // assembly and the actual navigation; instead the assembly plays
+            // over the opening stretch of this same scroll.
+            const landing = contentTop();
+            const elementTop =
+              (document.querySelector(href)?.getBoundingClientRect().top ?? 0) + window.scrollY;
+            // "Обо мне" *is* the content the assembly lands on, and that
+            // landing keeps the section's own label in frame — so stop there
+            // rather than scrolling on past it to the heading.
+            const target = elementTop <= landing + 400 ? landing : href;
+            const travel = Math.abs((typeof target === "number" ? target : elementTop) - window.scrollY);
+            movePage(
+              target,
+              () => {
+                scrub?.enable();
+                transitioning = false;
+                flushPendingNav();
+              },
+              // Long trips get proportionally more time so the pace stays the
+              // same whether the section is just below or at the far end.
+              Math.min(1.2, Math.max(navDuration, travel / 4000))
+            );
           };
           if (reducedMotion) {
             gsap.set(underlinePathRef.current, { attr: { "stroke-dashoffset": 0 } });
