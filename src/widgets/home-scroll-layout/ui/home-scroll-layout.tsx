@@ -15,7 +15,7 @@ import { useLenis } from "@/shared/lib/smooth-scroll-provider";
 import { splitName } from "@/shared/lib/split-name";
 import { NavLink } from "@/shared/ui/nav-link";
 import { ScribbleUnderline } from "@/shared/ui/scribble-underline";
-import { SectionLabel } from "@/shared/ui/section-label";
+import { SectionHeading } from "@/shared/ui/section-heading";
 import { TypewriterText } from "@/shared/ui/typewriter-text";
 import { ExperienceTimeline } from "@/widgets/experience-timeline/ui/experience-timeline";
 import { ProjectsGrid } from "@/widgets/projects-grid/ui/projects-grid";
@@ -994,18 +994,16 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
             lg:pt-[130vh] padding (padding shifts content inward, not the
             element's own position), so an #about anchor jump there would land
             back at the hero instead of at the actual visible content. */}
-        <section className="border-t border-[#2a2824] px-6 py-24 sm:px-12 lg:border-t-0 lg:pt-[130vh]">
-          <SectionLabel>ОБО МНЕ</SectionLabel>
-          <h2
-            id="about"
-            ref={aboutHeadingRef}
-            className="mt-6 font-display text-4xl leading-[1.05] text-[#ece5d6] sm:text-5xl"
-          >
+        <section className="px-6 py-24 sm:px-12 lg:pt-[130vh]">
+          <SectionHeading index={0} label="Обо мне" headingId="about" headingRef={aboutHeadingRef}>
+            Немного о себе
+          </SectionHeading>
+          <p className="mt-8 max-w-lg text-2xl leading-[1.25] text-[#ece5d6] sm:text-3xl">
             Создаю интерфейсы,
             <br />
             <span className="text-[#e2451f]">которые работают</span>
-          </h2>
-          <p ref={statsSubtitleRef} className="mt-4 max-w-md text-[#b8b1a3]">
+          </p>
+          <p ref={statsSubtitleRef} className="mt-5 max-w-md text-[#b8b1a3]">
             Разрабатываю быстрые, аккуратные продукты — от идеи до продакшена.
           </p>
 
@@ -1013,7 +1011,7 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
               like how it looked; widget file kept as-is in case it comes back. */}
 
           <div className="mt-16 border-t border-[#2a2824] pt-16">
-            <div className="max-w-xl space-y-4 text-3xl leading-[1.15] text-[#ece5d6] sm:text-4xl">
+            <div className="max-w-xl space-y-4 text-xl leading-[1.5] text-[#ece5d6] sm:text-2xl">
               {about.split(/\n{2,}/).map((paragraph, i) => (
                 <p key={i}>{paragraph}</p>
               ))}
@@ -1034,9 +1032,10 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
         </section>
 
         {profile.experience.length > 0 && (
-          <section id="experience" className="border-t border-[#2a2824] px-6 py-24 sm:px-12">
-            <SectionLabel>ОПЫТ</SectionLabel>
-            <h2 className="mt-6 font-display text-3xl text-[#ece5d6] sm:text-4xl">Мой путь</h2>
+          <section id="experience" className="px-6 py-24 sm:px-12">
+            <SectionHeading index={1} label="Опыт">
+              Мой путь
+            </SectionHeading>
             <ExperienceTimeline items={profile.experience} />
           </section>
         )}

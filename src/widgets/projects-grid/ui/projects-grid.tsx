@@ -1,12 +1,14 @@
 import { ProjectCard } from "@/entities/project/ui/project-card";
 import type { Project } from "@/entities/project/model/types";
-import { SectionLabel } from "@/shared/ui/section-label";
+import { SectionHeading } from "@/shared/ui/section-heading";
 
 export function ProjectsGrid({ projects }: { projects: Project[] }) {
   return (
-    <section className="border-t border-[#2a2824]">
-      <div className="px-6 py-10 sm:px-12">
-        <SectionLabel>ПРОЕКТЫ</SectionLabel>
+    <section>
+      <div className="px-6 pt-24 pb-12 sm:px-12">
+        <SectionHeading index={2} label="Проекты">
+          Избранные работы
+        </SectionHeading>
       </div>
       {projects.length === 0 ? (
         <p className="px-6 pb-20 text-[#8a8378] sm:px-12">Скоро здесь появятся проекты.</p>
