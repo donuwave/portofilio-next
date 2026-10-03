@@ -489,11 +489,11 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
         // How much scroll draws the underline — and with it, where the hero
         // region ends: past this point the assembly has taken over.
         const drawRange = () => window.innerHeight * 0.22;
-        // Coming back up lands just short of that point instead of at the very
-        // top, so the line reads as already drawn and replaying the assembly is
-        // one short scroll away rather than a full redraw from scratch. The
-        // hero itself is pinned, so this looks identical to sitting at scroll 0.
-        const heroReturnScroll = () => drawRange() * 0.92;
+        // Coming back up lands at the very top with the underline fully
+        // undrawn, so every trip into the hero starts from the same clean
+        // state: scrolling down draws the line first, and only then does the
+        // assembly take over.
+        const heroReturnScroll = () => 0;
         // A selector target is resolved by Lenis itself, so a nav destination
         // lands in exactly the same place whether the hero transition took the
         // click over or an ordinary link handled it.
