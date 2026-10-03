@@ -12,7 +12,14 @@ export async function ProjectDetailView({ slug }: { slug: string }) {
 
   const title = pickLocalized(project.title);
   const description = pickLocalized(project.description);
-  const navItems = project.cases.map((caseItem) => ({ id: caseItem.id, title: pickLocalized(caseItem.title) }));
+  const navItems = [
+    { id: "project-about", title: "О проекте" },
+    ...project.cases.map((caseItem) => ({
+      id: `case-${caseItem.id}`,
+      title: pickLocalized(caseItem.title),
+      numbered: true,
+    })),
+  ];
 
   return (
     <div className="mx-auto max-w-[96rem] px-6 pb-28 pt-8 sm:px-12 lg:grid lg:grid-cols-[minmax(18rem,24rem)_minmax(0,1fr)] lg:gap-20 lg:pt-12">
@@ -31,9 +38,9 @@ export async function ProjectDetailView({ slug }: { slug: string }) {
           )}
         </div>
 
-        {navItems.length > 0 && (
+        {project.cases.length > 0 && (
           <div className="mt-12 hidden lg:block">
-            <p className="mb-3 text-sm text-[#8a8378]">Кейсы</p>
+            <p className="mb-3 text-sm text-[#8a8378]">Содержание</p>
             <CaseNav items={navItems} />
           </div>
         )}
@@ -47,7 +54,7 @@ export async function ProjectDetailView({ slug }: { slug: string }) {
           </div>
         )}
 
-        <div className="mt-12 max-w-[44rem]">
+        <div id="project-about" className="mt-12 max-w-[44rem]">
           <h2 className="text-sm text-[#8a8378]">О проекте</h2>
           <p className="mt-4 whitespace-pre-line text-lg leading-[1.7] text-[#cfc8b8]">{description}</p>
         </div>

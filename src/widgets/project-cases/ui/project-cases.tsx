@@ -7,7 +7,7 @@ export function ProjectCases({ cases }: { cases: Case[] }) {
   return (
     <section aria-label="Кейсы">
       {cases.map((caseItem, index) => (
-        <CaseItem key={caseItem.id} item={caseItem} index={index} />
+        <CaseItem key={caseItem.id} item={caseItem} index={index} isLast={index === cases.length - 1} />
       ))}
     </section>
   );
