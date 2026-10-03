@@ -10,7 +10,7 @@ export function ProjectCases({ cases }: { cases: Case[] }) {
       <SectionHeading index={1} label="Кейсы" />
       <div className="mt-14">
         {cases.map((caseItem, index) => (
-          <CaseItem key={caseItem.id} item={caseItem} index={index} isLast={index === cases.length - 1} />
+          <CaseItem key={caseItem.id} item={caseItem} isLast={index === cases.length - 1} />
         ))}
       </div>
     </section>
