@@ -140,7 +140,7 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
 
   const leftColumnRef = useRef<HTMLDivElement>(null);
   // leftColumnRef's own top edge sits at the very top of the page regardless
-  // of the section's lg:pt-[160vh] padding (padding shifts content inward,
+  // of the section's lg:pt-[130vh] padding (padding shifts content inward,
   // not the element's own border-box position) — so a trigger's "content has
   // actually scrolled into view" needs to watch the padded content itself.
   const aboutHeadingRef = useRef<HTMLHeadingElement>(null);
@@ -534,28 +534,6 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
             });
           }
         };
-        // The sidebar's own animation and the left column's scrolling are never
-        // allowed to overlap: whichever one is not running is held still. This
-        // plays a timeline with the page frozen (Lenis stopped, so a wheel or
-        // swipe can't start scrolling content in underneath it) and hands over
-        // to `onDone` once it has fully landed.
-        const playHeld = (timeline: gsap.core.Timeline, span: number, reverse: boolean, onDone: () => void) => {
-          if (reducedMotion) {
-            if (reverse) timeline.progress(0).pause();
-            else timeline.progress(1).pause();
-            onDone();
-            return;
-          }
-          lenisRef?.current?.stop();
-          const finish = () => {
-            lenisRef?.current?.start();
-            onDone();
-          };
-          timeline.eventCallback("onComplete", finish).eventCallback("onReverseComplete", finish);
-          timeline.timeScale(timeline.duration() / span);
-          if (reverse) timeline.reverse();
-          else timeline.play(0);
-        };
         const assemble = () => {
           if (assembled || transitioning || cancelled) return;
           assembled = true;
@@ -565,12 +543,14 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
             return;
           }
           transitioning = true;
-          playHeld(tl, duration, false, () => {
-            // Only now, with the sidebar fully assembled, does the page move.
-            movePage(target, () => {
-              transitioning = false;
-            }, duration * 0.8, false);
-          });
+          if (reducedMotion) tl.progress(1).pause();
+          else tl.timeScale(tl.duration() / duration).play(0);
+          // Unlocked: leaving the hero shouldn't hold the page hostage for the
+          // length of the animation — scrolling on right away just carries on
+          // from wherever the move has got to.
+          movePage(target, () => {
+            transitioning = false;
+          }, duration, false);
         };
         // `target` is where the page itself should end up: the near-drawn
         // landing point for ordinary upward scrolling, or the very top when
@@ -578,20 +558,19 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
         const returnToHero = (target = heroReturnScroll()) => {
           if (!assembled || transitioning || cancelled) return;
           transitioning = true;
-          // Scroll the content out of the way first; the sidebar stays
-          // assembled until the left column has stopped moving.
+          // invalidate() re-reads each piece's current position, so an
+          // interrupted transition travels from where it actually is.
+          if (!reducedMotion) backTl.invalidate().timeScale(backTl.duration() / duration).play(0);
+          // The underline stays on its own scrub, which follows the scroll
+          // position — so it's the last thing to visibly move, landing either
+          // near-complete or fully undrawn depending on the target.
           movePage(target, () => {
-            // invalidate() re-reads each piece's current position, so the
-            // reverse travels from where everything actually is.
-            backTl.invalidate();
-            playHeld(backTl, duration, false, () => {
-              tl.pause(0);
-              backTl.pause();
-              assembled = false;
-              transitioning = false;
-              flushPendingNav();
-            });
-          }, duration * 0.8);
+            tl.pause(0);
+            backTl.pause();
+            assembled = false;
+            transitioning = false;
+            flushPendingNav();
+          });
         };
         // A nav click from the hero has no scroll gesture behind it, so nothing
         // has drawn the line or started the assembly. Left alone it scrolls the
@@ -627,29 +606,31 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
           scrub?.disable(false);
           const runAssembly = () => {
             if (cancelled) return;
-            // Assemble the sidebar first, with the page held still, and only
-            // then travel to the section the link points at.
-            playHeld(tl, navDuration, false, () => {
-              const landing = contentTop();
-              const elementTop =
-                (document.querySelector(href)?.getBoundingClientRect().top ?? 0) + window.scrollY;
-              // "Обо мне" *is* the content the assembly lands on, and that
-              // landing keeps the section's own label in frame — so stop there
-              // rather than scrolling on past it to the heading.
-              const target = elementTop <= landing + 400 ? landing : href;
-              const travel = Math.abs((typeof target === "number" ? target : elementTop) - window.scrollY);
-              movePage(
-                target,
-                () => {
-                  scrub?.enable();
-                  transitioning = false;
-                  flushPendingNav();
-                },
-                // Long trips get proportionally more time so the pace stays the
-                // same whether the section is just below or at the far end.
-                Math.min(1.2, Math.max(navDuration, travel / 4000))
-              );
-            });
+            if (reducedMotion) tl.progress(1).pause();
+            else tl.timeScale(tl.duration() / navDuration).play(0);
+            // One continuous move all the way to the section. Landing on the
+            // content first and setting off again put a dead stop between the
+            // assembly and the actual navigation; instead the assembly plays
+            // over the opening stretch of this same scroll.
+            const landing = contentTop();
+            const elementTop =
+              (document.querySelector(href)?.getBoundingClientRect().top ?? 0) + window.scrollY;
+            // "Обо мне" *is* the content the assembly lands on, and that
+            // landing keeps the section's own label in frame — so stop there
+            // rather than scrolling on past it to the heading.
+            const target = elementTop <= landing + 400 ? landing : href;
+            const travel = Math.abs((typeof target === "number" ? target : elementTop) - window.scrollY);
+            movePage(
+              target,
+              () => {
+                scrub?.enable();
+                transitioning = false;
+                flushPendingNav();
+              },
+              // Long trips get proportionally more time so the pace stays the
+              // same whether the section is just below or at the far end.
+              Math.min(1.2, Math.max(navDuration, travel / 4000))
+            );
           };
           if (reducedMotion) {
             gsap.set(underlinePathRef.current, { attr: { "stroke-dashoffset": 0 } });
@@ -1128,10 +1109,10 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
       <div ref={leftColumnRef} className="lg:col-start-1 lg:row-start-1 lg:pl-20">
         {/* id lives on the heading, not the section — the section's own
             border-box top sits at the very top of the page regardless of its
-            lg:pt-[160vh] padding (padding shifts content inward, not the
+            lg:pt-[130vh] padding (padding shifts content inward, not the
             element's own position), so an #about anchor jump there would land
             back at the hero instead of at the actual visible content. */}
-        <section className="px-6 py-24 sm:px-12 lg:pt-[160vh]">
+        <section className="px-6 py-24 sm:px-12 lg:pt-[130vh]">
           <SectionHeading index={0} label="Обо мне" headingId="about" headingRef={aboutHeadingRef} />
           <div ref={aboutCopyRef}>
             <p className="mt-10 max-w-[20ch] text-balance text-[clamp(1.875rem,3.4vw,3.25rem)] leading-[1.1] text-[#ece5d6]">
