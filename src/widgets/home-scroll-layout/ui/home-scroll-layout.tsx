@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { SplitText } from "gsap/SplitText";
@@ -16,11 +16,49 @@ import { splitName } from "@/shared/lib/split-name";
 import { NavLink } from "@/shared/ui/nav-link";
 import { ScribbleUnderline } from "@/shared/ui/scribble-underline";
 import { SectionHeading } from "@/shared/ui/section-heading";
+import { SocialIcon } from "@/shared/ui/social-icon";
+import { Marquee } from "@/shared/ui/marquee";
+import { ContactForm } from "@/features/contact-form/ui/contact-form";
 import { TypewriterText } from "@/shared/ui/typewriter-text";
 import { ExperienceTimeline } from "@/widgets/experience-timeline/ui/experience-timeline";
-import { ProjectsGrid } from "@/widgets/projects-grid/ui/projects-grid";
+import { ProjectsShowcase } from "@/widgets/projects-showcase/ui/projects-showcase";
 
 gsap.registerPlugin(ScrollTrigger, SplitText);
+
+// What a client can hire for, each scannable on its own.
+const SERVICES = [
+  {
+    title: "Фронтенд под ключ",
+    text: "От вёрстки до сложных интерактивных модулей, карт и интеграций со сторонними сервисами.",
+  },
+  {
+    title: "Серверная часть",
+    text: "API на Node.js и NestJS, работа с базами данных и внешними системами.",
+  },
+  {
+    title: "Боты и автоматизация",
+    text: "Telegram-боты и скрипты, которые снимают с команды повторяющуюся рутину.",
+  },
+];
+
+const CONTACT_EMAIL = "dtareev123@gmail.com";
+const CONTACT_BUTTONS = [
+  {
+    label: "Telegram",
+    href: SOCIAL_LINKS.find((link) => link.icon === "telegram")?.href ?? "#",
+    icon: <SocialIcon name="telegram" className="h-4 w-4" />,
+  },
+  {
+    label: "Почта",
+    href: `mailto:${CONTACT_EMAIL}`,
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4" aria-hidden="true">
+        <rect x="3" y="5" width="18" height="14" rx="2" />
+        <path d="m4 7 8 6 8-6" />
+      </svg>
+    ),
+  },
+];
 
 // Uppercase text renders "i" as a dotless capital I, swallowing the dot — this
 // stands two decorative dots back in above the first "ii" it finds. Each dot
@@ -107,11 +145,8 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
   // actually scrolled into view" needs to watch the padded content itself.
   const aboutHeadingRef = useRef<HTMLHeadingElement>(null);
 
-  // Stats block (heading + subtitle + the 3 metrics right below it) — a
-  // single cascading reveal played once, the first time it scrolls into
-  // view. aboutHeadingRef doubles as the split-text target; these cover the
-  // rest of the block.
-  const statsSubtitleRef = useRef<HTMLParagraphElement>(null);
+  // The profile copy enters with the about heading.
+  const aboutCopyRef = useRef<HTMLDivElement>(null);
 
   // Fixed hero chrome (top-left tag, bottom-left scroll hint) — has no final
   // counterpart anywhere in the sidebar, so it simply fades out as the hero
@@ -137,8 +172,29 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
 
   const { first, rest } = splitName(profile.name);
   const tag = profile.skills.slice(0, 3).join(" / ").toUpperCase();
-  const about = pickLocalized(profile.about);
   const position = profile.currentJobPosition ? pickLocalized(profile.currentJobPosition) : null;
+
+  // Bumped once a resize settles, to rebuild the hero layout at the new size.
+  const [layoutKey, setLayoutKey] = useState(0);
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>;
+    let width = window.innerWidth;
+    let height = window.innerHeight;
+    const onResize = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        if (window.innerWidth === width && window.innerHeight === height) return;
+        width = window.innerWidth;
+        height = window.innerHeight;
+        setLayoutKey((key) => key + 1);
+      }, 200);
+    };
+    window.addEventListener("resize", onResize);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("resize", onResize);
+    };
+  }, []);
 
   // useLayoutEffect (not useEffect) — this sets every element's hero-frame
   // starting position via gsap.set. With useEffect, the browser paints the
@@ -220,25 +276,47 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
 
         // Grow each piece to its hero-frame size, in place, so we can measure
         // exactly where it naturally lands at that size before any offset.
-        gsap.set(nameRef.current, { fontSize: "9vw", x: 0, y: 0 });
-        gsap.set(surnameRef.current, { fontSize: "9vw", x: 0, y: 0 });
-        gsap.set(taglineRef.current, { x: 0, y: 0 });
-        gsap.set(underlineWrapRef.current, { width: 480, x: 0, y: 0 });
-        gsap.set(photoRef.current, { width: PHOTO_HERO_WIDTH, height: photoHeroHeight, x: 0, y: 0 });
-        gsap.set(socialRef.current, { x: 0, y: 0 });
-
-        const nameRect = nameRef.current!.getBoundingClientRect();
-        const surnameRect = surnameRef.current?.getBoundingClientRect() ?? nameRect;
-        const taglineRect = taglineRef.current!.getBoundingClientRect();
-        const underlineRect = underlineWrapRef.current!.getBoundingClientRect();
-        const photoRect = photoRef.current!.getBoundingClientRect();
-        const socialRect = socialRef.current!.getBoundingClientRect();
-
         // Row layout: name -- gap-10 -- (tagline above / surname) -- gap-8 --
         // photo, centered as a whole within inset-x-12, matching the old
         // absolute inset-x-12 + justify-center row exactly.
         const GAP_NAME_SURNAME = 40; // gap-10
         const GAP_GROUP_PHOTO = 32; // gap-8
+
+        // 9vw is the hero size on a wide screen, but on a narrower one the
+        // whole row — name, surname, photo and the gaps between — no longer
+        // fits, and the pieces end up laid over each other. Shrink the type
+        // until the row fits inside the 48px side insets. Set in px (not vw)
+        // so it can't drift away from the offsets below when the window
+        // changes; a resize rebuilds all of this instead.
+        let heroFontSize = vw * 0.09;
+        gsap.set([nameRef.current, surnameRef.current], { fontSize: heroFontSize, x: 0, y: 0 });
+        gsap.set(photoRef.current, { width: PHOTO_HERO_WIDTH, height: photoHeroHeight, x: 0, y: 0 });
+        const textWidth =
+          nameRef.current!.getBoundingClientRect().width + (surnameRef.current?.getBoundingClientRect().width ?? 0);
+        const roomForText = vw - 96 - GAP_NAME_SURNAME - GAP_GROUP_PHOTO - PHOTO_HERO_WIDTH;
+        if (textWidth > roomForText) {
+          heroFontSize *= roomForText / textWidth;
+          gsap.set([nameRef.current, surnameRef.current], { fontSize: heroFontSize });
+        }
+        gsap.set(taglineRef.current, { x: 0, y: 0 });
+        gsap.set(underlineWrapRef.current, { width: 480, x: 0, y: 0 });
+        gsap.set(socialRef.current, { x: 0, y: 0 });
+
+        // Every offset below is a position in the pinned sidebar's frame, i.e.
+        // the viewport as it is at scroll 0. Before the pin exists the sidebar
+        // still scrolls with the page, so a rebuild after a resize mid-page
+        // would read everything shifted up by however far it's scrolled.
+        const scrolled = window.scrollY;
+        const atTop = (el: Element) => {
+          const rect = el.getBoundingClientRect();
+          return { left: rect.left, top: rect.top + scrolled, width: rect.width, height: rect.height };
+        };
+        const nameRect = atTop(nameRef.current!);
+        const surnameRect = surnameRef.current ? atTop(surnameRef.current) : nameRect;
+        const taglineRect = atTop(taglineRef.current!);
+        const underlineRect = atTop(underlineWrapRef.current!);
+        const photoRect = atTop(photoRef.current!);
+        const socialRect = atTop(socialRef.current!);
         const groupWidth = Math.max(taglineRect.width, surnameRect.width);
         // The underline's hero-state width must span from DANIIL's left edge to
         // TAREEV's right edge — the two sit side by side at this point — not the
@@ -301,7 +379,7 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
         // one visibly travels into its own spot in the wrapped grid.
         const navItems = navItemRefs.current.filter((el): el is HTMLSpanElement => el !== null);
         const NAV_GAP = vw >= 1280 ? 24 : 16; // gap-x-6 : gap-x-4
-        const navItemRects = navItems.map((el) => el.getBoundingClientRect());
+        const navItemRects = navItems.map(atTop);
         const navRowWidth =
           navItemRects.reduce((sum, r) => sum + r.width, 0) + NAV_GAP * Math.max(navItemRects.length - 1, 0);
         let navCursor = vw - 48 - navRowWidth;
@@ -419,18 +497,30 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
         // A selector target is resolved by Lenis itself, so a nav destination
         // lands in exactly the same place whether the hero transition took the
         // click over or an ordinary link handled it.
-        const movePage = (target: number | string, onComplete: () => void, span = duration) => {
+        // `lock` keeps the user's own scrolling out until the move lands. Left
+        // off, a wheel or swipe mid-flight simply takes over from it — and
+        // since Lenis never reports an interrupted move as complete, the
+        // callback then runs on a timer at the moment the move would have
+        // ended instead.
+        const movePage = (target: number | string, onComplete: () => void, span = duration, lock = true) => {
           scrollTween?.kill();
           const lenis = lenisRef?.current;
           if (lenis) {
+            let done = false;
+            const finish = () => {
+              if (done) return;
+              done = true;
+              onComplete();
+            };
             lenis.scrollTo(target, {
               duration: span,
               immediate: reducedMotion,
-              lock: true,
+              lock,
               force: true,
               easing: (t: number) => 1 - Math.pow(1 - t, 3),
-              onComplete,
+              onComplete: finish,
             });
+            if (!lock) gsap.delayedCall(span, finish);
           } else {
             const resolved =
               typeof target === "number"
@@ -455,7 +545,12 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
           transitioning = true;
           if (reducedMotion) tl.progress(1).pause();
           else tl.timeScale(tl.duration() / duration).play(0);
-          movePage(target, () => { transitioning = false; });
+          // Unlocked: leaving the hero shouldn't hold the page hostage for the
+          // length of the animation — scrolling on right away just carries on
+          // from wherever the move has got to.
+          movePage(target, () => {
+            transitioning = false;
+          }, duration, false);
         };
         // `target` is where the page itself should end up: the near-drawn
         // landing point for ordinary upward scrolling, or the very top when
@@ -560,14 +655,38 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
         // A small dead zone below the landing point prevents a refresh or
         // subpixel rounding from immediately reversing the forward transition.
         // Ordinary upward scrolling inside the content remains untouched.
+        //
+        // This used to be a 1px-tall ScrollTrigger with onLeaveBack, which
+        // sounds right but isn't: onLeaveBack fires on any crossing of that
+        // boundary, and a single fast wheel-driven scroll frame (or a refresh
+        // recomputing contentTop() as the page's height settles) can jump
+        // clean over a 1px band in one tick, which GSAP can register as a
+        // backward crossing even while net motion is downward — reopening the
+        // hero mid-scroll, on top of the very content it had just revealed.
+        // Checking scroll position and direction explicitly on every frame
+        // has no boundary to jump over, so there's nothing to misfire.
         ScrollTrigger.create({
           trigger: sectionRef.current,
-          start: () => Math.max(1, contentTop() - 16),
-          end: "+=1",
-          // Wrapped, not passed directly: ScrollTrigger hands the callback its
-          // own instance, which would land in returnToHero's target argument.
-          onLeaveBack: () => returnToHero(),
+          start: "top top",
+          end: "bottom bottom",
+          onUpdate: (self) => {
+            if (assembled && !transitioning && self.direction < 0 && self.scroll() < contentTop() - 16) {
+              returnToHero();
+            }
+          },
         });
+        // Re-arming (assembled = false) used to also happen here, directly, the
+        // instant scroll reached the very top — a plain position check with no
+        // regard for whether a transition was genuinely in flight. That's the
+        // same class of bug as the onLeaveBack one above: it fired off of a
+        // single scroll reading rather than sustained motion, so a fast flick
+        // through the whole page (or a scrub update landing on a stale reading
+        // the same tick scroll happened to sit near 0) could snap tl back to
+        // its hero frame — instantly, with no scroll to match — while the page
+        // stayed deep in the content it had just reversed on top of. The
+        // direction-checked trigger above already re-arms correctly for every
+        // real case, including landing at the very top, so this only needs to
+        // draw the line.
         const underlineTrigger = gsap.to(underlinePathRef.current, {
           attr: { "stroke-dashoffset": 0 },
           ease: "none",
@@ -577,14 +696,6 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
             start: "top top",
             end: () => `+=${drawRange()}`,
             scrub: reducedMotion ? true : 0.15,
-            onUpdate: (self) => {
-              // Scrolling manually all the way to the very top (the back-to-top
-              // link, Home key) also re-arms the next transition.
-              if (self.scroll() <= 1 && assembled && !transitioning) {
-                assembled = false;
-                tl.pause(0);
-              }
-            },
           },
         });
 
@@ -594,6 +705,15 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
           end: "bottom bottom",
           pin: sidebarRef.current,
         });
+
+        // A resize rebuilds this whole setup from the hero frame, which on
+        // first load always matches scroll 0. Rebuilt while already reading
+        // the content, the sidebar has to come back assembled, not as a
+        // full-size hero laid over the text.
+        if (window.scrollY > drawRange()) {
+          assembled = true;
+          tl.progress(1).pause();
+        }
 
         // Images (project covers, the profile photo) and web fonts can still be
         // loading when this effect first runs, so the page's real height isn't
@@ -617,13 +737,13 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
           scrollTrigger: { trigger: aboutHeadingRef.current, start: "top 95%", once: true },
         }).to(leftColumnRef.current, { autoAlpha: 1, ease: "power2.out", duration: 0.6 });
 
-        // Heading and subtitle enter together; AboutStats owns the metrics animation.
+        // Heading and profile copy enter together.
         headingSplit = aboutHeadingRef.current
           ? SplitText.create(aboutHeadingRef.current, { type: "words", mask: "words" })
           : null;
 
         if (headingSplit) gsap.set(headingSplit.words, { yPercent: 110 });
-        gsap.set(statsSubtitleRef.current, { autoAlpha: 0, y: 24 });
+        gsap.set(aboutCopyRef.current, { autoAlpha: 0, y: 24 });
 
         const statsTl = gsap.timeline({
           scrollTrigger: { trigger: aboutHeadingRef.current, start: "top 85%", once: true },
@@ -641,7 +761,7 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
         }
 
         statsTl.to(
-          statsSubtitleRef.current,
+          aboutCopyRef.current,
           { autoAlpha: 1, y: 0, duration: 0.5, ease: "power2.out" },
           statsCursor
         );
@@ -835,14 +955,12 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
     });
 
     return () => mm.revert();
-    // profile.skills.length/projects.length are the only prop values read
-    // inside this effect (for the stat targets) — everything else the effect
-    // touches is either a ref or module-scope config, so this pair is the
-    // full, accurate dependency list despite the effect's size.
-  }, [profile.skills.length, projects.length, lenisRef]);
+    // layoutKey isn't read inside: it's there so a resize re-runs the whole
+    // setup, since every hero offset above is measured once in px.
+  }, [profile.skills.length, projects.length, lenisRef, layoutKey]);
 
   return (
-    <div id="top" ref={sectionRef} className="lg:grid lg:grid-cols-2 lg:items-start">
+    <div id="top" ref={sectionRef} className="lg:grid lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:items-start">
       {tag && (
         <div
           ref={tagRef}
@@ -886,7 +1004,7 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
               outside the name's own footprint via the mouse-repel; without an
               explicit stacking order here they'd paint underneath whichever
               later sibling (photo, nav, social…) they happened to cross. */}
-          <div className="relative z-30 hidden text-right lg:block">
+          <div className="pointer-events-none relative z-30 hidden text-right lg:block">
             <p ref={taglineRef} className="absolute -top-10 right-0 whitespace-nowrap font-hand text-2xl text-[#8a8378]">
               <span className="inline-block" style={{ animation: "arrow-bounce 1.6s ease-in-out infinite" }}>
                 ↙
@@ -919,10 +1037,10 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
             <ProfilePhoto avatar={profile.avatar} name={profile.name} />
           </div>
 
-          <div ref={socialRef} className="flex gap-4 text-xs tracking-[0.15em] text-[#8a8378]">
+          <div ref={socialRef} className="flex gap-5 text-[#8a8378]">
             {SOCIAL_LINKS.map((link) => (
-              <a key={link.label} href={link.href} className="hover:text-[#ece5d6]">
-                {link.label.toUpperCase()} ↗
+              <a key={link.label} href={link.href} aria-label={link.label} className="transition-colors hover:text-[#ece5d6]">
+                <SocialIcon name={link.icon} />
               </a>
             ))}
           </div>
@@ -995,63 +1113,72 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
             element's own position), so an #about anchor jump there would land
             back at the hero instead of at the actual visible content. */}
         <section className="px-6 py-24 sm:px-12 lg:pt-[130vh]">
-          <SectionHeading index={0} label="Обо мне" headingId="about" headingRef={aboutHeadingRef}>
-            Немного о себе
-          </SectionHeading>
-          <p className="mt-8 max-w-lg text-2xl leading-[1.25] text-[#ece5d6] sm:text-3xl">
-            Создаю интерфейсы,
-            <br />
-            <span className="text-[#e2451f]">которые работают</span>
-          </p>
-          <p ref={statsSubtitleRef} className="mt-5 max-w-md text-[#b8b1a3]">
-            Разрабатываю быстрые, аккуратные продукты — от идеи до продакшена.
-          </p>
-
-          {/* AboutStats ("Опыт разработки" card) removed for now — user didn't
-              like how it looked; widget file kept as-is in case it comes back. */}
-
-          <div className="mt-16 border-t border-[#2a2824] pt-16">
-            <div className="max-w-xl space-y-4 text-xl leading-[1.5] text-[#ece5d6] sm:text-2xl">
-              {about.split(/\n{2,}/).map((paragraph, i) => (
-                <p key={i}>{paragraph}</p>
-              ))}
-            </div>
-            {profile.skills.length > 0 && (
-              <div id="skills" className="mt-6 flex flex-wrap gap-2">
-                {profile.skills.map((skill) => (
-                  <span
-                    key={skill}
-                    className="rounded-full border border-[#3a372f] px-3 py-1 text-xs tracking-wide text-[#b8b1a3]"
-                  >
-                    {skill}
-                  </span>
-                ))}
-              </div>
-            )}
+          <SectionHeading index={0} label="Обо мне" headingId="about" headingRef={aboutHeadingRef} />
+          <div ref={aboutCopyRef}>
+            <p className="mt-10 max-w-[20ch] text-balance text-[clamp(1.875rem,3.4vw,3.25rem)] leading-[1.1] text-[#ece5d6]">
+              Создаю интерфейсы, <span className="text-[#e2451f]">которые работают</span>
+            </p>
+            <p className="mt-5 max-w-[36rem] text-lg text-[#8a8378]">
+              Разрабатываю быстрые, аккуратные продукты — от идеи до продакшена.
+            </p>
           </div>
+
+          <ul className="mt-16 grid gap-10 md:grid-cols-3 md:gap-8">
+            {SERVICES.map((service) => (
+              <li key={service.title} className="border-t border-[#3a372f] pt-5">
+                <h3 className="text-lg font-medium text-[#ece5d6]">{service.title}</h3>
+                <p className="mt-3 leading-[1.6] text-[#b8b1a3]">{service.text}</p>
+              </li>
+            ))}
+          </ul>
+
+          {profile.skills.length > 0 && (
+            <div id="skills" className="mt-16 text-lg text-[#cfc8b8]">
+              <Marquee items={profile.skills} />
+            </div>
+          )}
         </section>
 
         {profile.experience.length > 0 && (
           <section id="experience" className="px-6 py-24 sm:px-12">
-            <SectionHeading index={1} label="Опыт">
-              Мой путь
-            </SectionHeading>
+            <SectionHeading index={1} label="Опыт" />
             <ExperienceTimeline items={profile.experience} />
           </section>
         )}
 
         <div id="projects">
-          <ProjectsGrid projects={projects} />
+          <ProjectsShowcase projects={projects} />
         </div>
 
-        <section id="contact" className="border-t border-[#2a2824] px-6 py-24 sm:px-12">
-          <p className="text-xs tracking-[0.25em] text-[#8a8378]">КОНТАКТЫ</p>
-          <a
-            href="mailto:dtareev123@gmail.com"
-            className="mt-6 block break-all font-display text-2xl text-[#ece5d6] hover:text-[#e2451f] sm:text-3xl lg:text-4xl"
-          >
-            dtareev123@gmail.com
-          </a>
+        <section id="contact" className="px-6 pt-24 sm:px-12">
+          <SectionHeading index={3} label="Контакты" />
+          <div className="mt-12 grid gap-14 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] xl:gap-20">
+            <div>
+              <p className="max-w-[24rem] text-[clamp(1.375rem,2vw,1.875rem)] leading-[1.25] text-[#ece5d6]">
+                Есть задача? Напишите — обсудим, как её решить.
+              </p>
+              <div className="mt-8 flex flex-wrap gap-3">
+                {CONTACT_BUTTONS.map((button) => (
+                  <a
+                    key={button.label}
+                    href={button.href}
+                    className="inline-flex items-center gap-2.5 rounded-full border border-[#3a372f] px-5 py-2.5 text-[#ece5d6] transition-colors hover:border-[#e2451f] hover:text-[#e2451f]"
+                  >
+                    {button.icon}
+                    {button.label}
+                  </a>
+                ))}
+              </div>
+            </div>
+            <ContactForm />
+          </div>
+
+          <footer className="mt-24 flex flex-col gap-2 border-t border-[#2a2824] py-8 text-sm text-[#8a8378] sm:flex-row sm:items-center sm:justify-between">
+            <span>
+              © {new Date().getFullYear()} {profile.name}
+            </span>
+            {position && <span>{position}</span>}
+          </footer>
         </section>
       </div>
     </div>

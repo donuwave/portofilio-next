@@ -59,6 +59,8 @@ model Project {
   slug        String        @unique
   title       Json
   description Json
+  // Who the product is for ("Заказчик", "Перевозчик"...), shown as a label.
+  tag         Json?
   coverId     String?
   cover       Media?        @relation(fields: [coverId], references: [id])
   techStack   String[]
@@ -115,4 +117,15 @@ model CaseMedia {
 
   @@id([caseId, mediaId])
   @@index([mediaId])
+}
+
+model ContactRequest {
+  id        String   @id @default(cuid())
+  name      String
+  contact   String
+  message   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
 }

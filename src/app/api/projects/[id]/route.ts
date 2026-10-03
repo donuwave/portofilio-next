@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { ApiError, handleApiError, parseJsonBody } from "@/lib/api";
@@ -35,7 +36,7 @@ export async function PATCH(request: Request, { params }: Params) {
 
     const project = await prisma.project.update({
       where: { id },
-      data,
+      data: { ...data, tag: data.tag === null ? Prisma.DbNull : data.tag },
       include: { cover: true, cases: { orderBy: { order: "asc" } } },
     });
     return NextResponse.json(project);

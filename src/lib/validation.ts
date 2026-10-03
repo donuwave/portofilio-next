@@ -45,6 +45,7 @@ export const projectCreateSchema = z.object({
   slug: slugSchema,
   title: localizedTextSchema,
   description: localizedTextSchema,
+  tag: localizedTextSchema.nullable().optional(),
   coverId: z.string().nullable().optional(),
   techStack: z.array(z.string().min(1)).default([]),
   status: projectStatusSchema.default("draft"),
@@ -68,3 +69,13 @@ export const caseMediaSetSchema = z.object({
 export const caseMediaAddSchema = z.object({
   mediaId: z.string().min(1),
 });
+
+export const contactRequestSchema = z.object({
+  name: z.string().trim().min(1, "Укажите имя").max(100),
+  contact: z.string().trim().min(3, "Укажите Telegram или почту").max(200),
+  message: z.string().trim().min(5, "Напишите пару слов о задаче").max(4000),
+  // Honeypot: hidden from people, filled in by bots.
+  website: z.string().max(500).optional(),
+});
+
+export const contactRequestUpdateSchema = z.object({ read: z.boolean() });

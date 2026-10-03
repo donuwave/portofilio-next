@@ -29,6 +29,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <Link href="/admin/files" className="hover:underline">
             Файлы
           </Link>
+          <Link href="/admin/requests" className="hover:underline">
+            Заявки
+          </Link>
         </nav>
         <div className="flex items-center gap-3">
           <span className="text-sm text-zinc-500">{session.email}</span>

@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { ApiError, handleApiError, parseJsonBody } from "@/lib/api";
@@ -28,7 +29,10 @@ export async function POST(request: Request) {
     const existing = await prisma.project.findUnique({ where: { slug: data.slug } });
     if (existing) throw new ApiError(409, "Project with this slug already exists");
 
-    const project = await prisma.project.create({ data, include: { cover: true } });
+    const project = await prisma.project.create({
+      data: { ...data, tag: data.tag === null ? Prisma.DbNull : data.tag },
+      include: { cover: true },
+    });
     return NextResponse.json(project, { status: 201 });
   } catch (err) {
     return handleApiError(err);

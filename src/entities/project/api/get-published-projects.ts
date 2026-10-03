@@ -13,6 +13,7 @@ export async function getPublishedProjects(): Promise<Project[]> {
     slug: project.slug,
     title: project.title as unknown as LocalizedText,
     description: project.description as unknown as LocalizedText,
+    tag: (project.tag as unknown as LocalizedText | null) ?? null,
     cover: project.cover ? { path: project.cover.path } : null,
     techStack: project.techStack,
   }));

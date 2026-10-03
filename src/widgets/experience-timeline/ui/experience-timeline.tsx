@@ -101,7 +101,7 @@ export function ExperienceTimeline({ items }: { items: Experience[] }) {
   if (items.length === 0) return null;
 
   return (
-    <div ref={rootRef} className="relative mt-12 border-t border-[#2a2824] py-10 sm:mt-16 sm:py-14">
+    <div ref={rootRef} className="relative mt-12 py-10 sm:mt-16 sm:py-14">
       <svg className="pointer-events-none absolute inset-0 h-full w-full overflow-visible" fill="none" aria-hidden="true">
         {items.slice(1).map((item) => (
           <path key={item.id} data-experience-path stroke="#e2451f" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />

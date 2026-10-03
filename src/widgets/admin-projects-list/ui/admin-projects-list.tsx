@@ -52,6 +52,7 @@ export function AdminProjectsList() {
         slug,
         title: { ru: titleRu, en: "" },
         description: { ru: "", en: "" },
+        tag: null,
         coverId: null,
         techStack: [],
         status: "draft",

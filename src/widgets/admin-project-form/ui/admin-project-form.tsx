@@ -82,6 +82,7 @@ export function AdminProjectForm({
         slug: form.slug,
         title: form.title,
         description: form.description,
+        tag: form.tag,
         coverId: form.coverId,
         techStack: form.techStack,
         status: form.status,
@@ -118,6 +119,12 @@ export function AdminProjectForm({
         value={form.description}
         onChange={(description) => setForm({ ...form, description })}
         multiline
+      />
+
+      <LocalizedTextField
+        label="Тег (для кого продукт)"
+        value={form.tag ?? { ru: "", en: "" }}
+        onChange={(tag) => setForm({ ...form, tag: tag.ru || tag.en ? tag : null })}
       />
 
       <Field label="Стек технологий">

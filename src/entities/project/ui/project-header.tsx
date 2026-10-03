@@ -1,6 +1,7 @@
 import { pickLocalized } from "@/shared/lib/localized-text";
 import { ScribbleUnderline } from "@/shared/ui/scribble-underline";
 import type { Project } from "../model/types";
+import { ProjectTag } from "./project-tag";
 
 export function ProjectHeader({ project }: { project: Project }) {
   const title = pickLocalized(project.title);
@@ -8,9 +9,10 @@ export function ProjectHeader({ project }: { project: Project }) {
 
   return (
     <header className="px-6 pb-16 pt-28 sm:px-12 sm:pt-36">
+      <ProjectTag tag={project.tag} className="mb-6" />
       <h1 className="break-words font-display text-[13vw] leading-[0.85] text-[#ece5d6] sm:text-8xl">{title}</h1>
       <ScribbleUnderline className="mt-5 h-3 w-40 text-[#e2451f] sm:h-4 sm:w-56" />
-      <p className="mt-8 max-w-xl text-[#b8b1a3]">{description}</p>
+      <p className="mt-8 max-w-xl whitespace-pre-line text-[#b8b1a3]">{description}</p>
       {project.techStack.length > 0 && (
         <div className="mt-6 flex flex-wrap gap-3">
           {project.techStack.map((tech) => (

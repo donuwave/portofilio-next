@@ -11,7 +11,7 @@ export async function ProjectDetailView({ slug }: { slug: string }) {
   return (
     <div>
       <Link
-        href="/"
+        href="/projects"
         className="fixed left-6 top-6 z-10 font-hand text-xl text-[#8a8378] hover:text-[#ece5d6] sm:left-12 sm:top-8"
       >
         ← Назад

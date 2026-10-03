@@ -9,6 +9,7 @@ export type ProjectAdmin = {
   slug: string;
   title: LocalizedText;
   description: LocalizedText;
+  tag: LocalizedText | null;
   coverId: string | null;
   cover: Media | null;
   techStack: string[];

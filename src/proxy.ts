@@ -2,7 +2,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import { SESSION_COOKIE_NAME, verifySessionToken } from "@/lib/session";
 
 const PUBLIC_ADMIN_PATHS = ["/admin/login"];
-const PUBLIC_API_PREFIXES = ["/api/auth/"];
+// /api/public/ is the only unauthenticated write surface (the contact form).
+const PUBLIC_API_PREFIXES = ["/api/auth/", "/api/public/"];
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;

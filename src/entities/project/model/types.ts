@@ -9,6 +9,7 @@ export type Project = {
   slug: string;
   title: LocalizedText;
   description: LocalizedText;
+  tag: LocalizedText | null;
   cover: ProjectCover;
   techStack: string[];
 };

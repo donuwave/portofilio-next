@@ -25,6 +25,11 @@ export default function AdminDashboardPage() {
             Файлы
           </Link>
         </li>
+        <li>
+          <Link href="/admin/requests" className="underline">
+            Заявки
+          </Link>
+        </li>
       </ul>
     </div>
   );
