@@ -5,9 +5,9 @@ export function ProjectCases({ cases }: { cases: Case[] }) {
   if (cases.length === 0) return null;
 
   return (
-    <section>
-      {cases.map((caseItem) => (
-        <CaseItem key={caseItem.id} item={caseItem} />
+    <section aria-label="Кейсы">
+      {cases.map((caseItem, index) => (
+        <CaseItem key={caseItem.id} item={caseItem} index={index} />
       ))}
     </section>
   );

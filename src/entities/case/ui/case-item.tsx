@@ -2,16 +2,23 @@ import { pickLocalized } from "@/shared/lib/localized-text";
 import type { Case } from "../model/types";
 import { CaseMediaCarousel } from "./case-media-carousel";
 
-export function CaseItem({ item }: { item: Case }) {
+// The first sentence is what a skimmer should walk away with, so it's set
+// apart as a lead; the rest is the detail for anyone who keeps reading.
+function splitLead(text: string) {
+  const match = text.match(/^([\s\S]+?[.!?…])(\s+[\s\S]*)?$/);
+  return match ? { lead: match[1], rest: (match[2] ?? "").trim() } : { lead: text, rest: "" };
+}
+
+export function CaseItem({ item, index }: { item: Case; index: number }) {
   const title = pickLocalized(item.title);
-  const description = pickLocalized(item.description);
+  const { lead, rest } = splitLead(pickLocalized(item.description));
 
   return (
-    <article className="border-t border-[#2a2824] py-20">
-      <div className="px-6 sm:px-12">
-        <h3 className="font-display text-4xl text-[#ece5d6] sm:text-5xl">{title}</h3>
-        <p className="mt-3 max-w-xl whitespace-pre-line text-[#b8b1a3]">{description}</p>
-      </div>
+    <article id={`case-${item.id}`} className="scroll-mt-24 border-t border-[#2a2824] py-14 first:border-t-0 first:pt-0">
+      <p className="text-sm tabular-nums text-[#e2451f]">{String(index + 1).padStart(2, "0")}</p>
+      <h2 className="mt-3 font-display text-[clamp(1.5rem,2.4vw,2.25rem)] leading-[1.15] text-[#ece5d6]">{title}</h2>
+      <p className="mt-6 max-w-[44rem] text-[clamp(1.125rem,1.4vw,1.375rem)] leading-[1.5] text-[#ece5d6]">{lead}</p>
+      {rest && <p className="mt-5 max-w-[44rem] whitespace-pre-line leading-[1.75] text-[#b8b1a3]">{rest}</p>}
       {item.media.length > 0 && (
         <div className="mt-10">
           <CaseMediaCarousel media={item.media} title={title} />

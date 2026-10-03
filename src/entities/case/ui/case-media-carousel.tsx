@@ -71,7 +71,7 @@ export function CaseMediaCarousel({ media, title }: { media: CaseMediaItem[]; ti
   return (
     <div
       ref={containerRef}
-      className="relative h-screen w-full overflow-hidden bg-[#0d0c0a] outline-none"
+      className="relative aspect-[16/10] w-full overflow-hidden rounded-sm bg-[#0d0c0a] outline-none"
       tabIndex={0}
       role="group"
       aria-label={`Медиа кейса «${title}», слайд ${index + 1} из ${media.length}`}
