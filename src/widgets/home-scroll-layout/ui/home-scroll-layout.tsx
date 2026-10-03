@@ -482,7 +482,7 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
           const label = aboutHeadingRef.current?.previousElementSibling;
           return Math.max(0, (label?.getBoundingClientRect().top ?? 0) + window.scrollY - 96);
         };
-        const duration = reducedMotion ? 0 : 1.1;
+        const duration = reducedMotion ? 0 : 0.8;
         // A nav click is a request to *get somewhere*, not to watch the
         // transition — same choreography, roughly twice the pace.
         const navDuration = duration / 2;
@@ -545,12 +545,12 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
           transitioning = true;
           if (reducedMotion) tl.progress(1).pause();
           else tl.timeScale(tl.duration() / duration).play(0);
-          // Unlocked: leaving the hero shouldn't hold the page hostage for the
-          // length of the animation — scrolling on right away just carries on
-          // from wherever the move has got to.
+          // Locked: the transition can't be outrun by scrolling. The wheel is
+          // ignored until the sidebar has assembled and the page has landed on
+          // the content, so nothing is skipped.
           movePage(target, () => {
             transitioning = false;
-          }, duration, false);
+          });
         };
         // `target` is where the page itself should end up: the near-drawn
         // landing point for ordinary upward scrolling, or the very top when
@@ -672,6 +672,17 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
           onUpdate: (self) => {
             if (assembled && !transitioning && self.direction < 0 && self.scroll() < contentTop() - 16) {
               returnToHero();
+              return;
+            }
+            // A fast flick can carry the page well past the underline's range
+            // before the scrubbed draw has even reported completion. Catch it
+            // as soon as it leaves the hero: pull the page back to the edge of
+            // that range and start the assembly from there, so it always plays
+            // in full instead of being run away from.
+            if (!assembled && !transitioning && !cancelled && self.direction > 0 && self.scroll() > drawRange()) {
+              lenisRef?.current?.scrollTo(drawRange(), { immediate: true, force: true });
+              gsap.set(underlinePathRef.current, { attr: { "stroke-dashoffset": 0 } });
+              assemble();
             }
           },
         });
