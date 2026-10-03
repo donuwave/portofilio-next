@@ -54,7 +54,23 @@ export function SmoothScrollProvider({ children }: { children: ReactNode }) {
     };
     window.addEventListener("wheel", onWheel, { capture: true, passive: true });
 
+    // Lenis measures the page's height once and then re-measures when its
+    // content element resizes — by default <html>. Here <html> is h-full, so
+    // its box never changes when the content does, and after client-side
+    // navigation Lenis keeps the previous page's scroll limit: a short page
+    // inherits a huge one (scrolling back up has to unwind the excess), and a
+    // tall page inherits a short one (it simply stops scrolling). <body> does
+    // grow with its content, so it's the element to watch.
+    let resizeFrame = 0;
+    const resizeObserver = new ResizeObserver(() => {
+      cancelAnimationFrame(resizeFrame);
+      resizeFrame = requestAnimationFrame(() => instance.resize());
+    });
+    resizeObserver.observe(document.body);
+
     return () => {
+      cancelAnimationFrame(resizeFrame);
+      resizeObserver.disconnect();
       window.removeEventListener("wheel", onWheel, { capture: true });
       gsap.ticker.remove(raf);
       instance.destroy();
@@ -68,7 +84,12 @@ export function SmoothScrollProvider({ children }: { children: ReactNode }) {
   // target. A route change throws all of that away and starts from the top.
   const pathname = usePathname();
   useEffect(() => {
-    lenisRef.current?.scrollTo(0, { immediate: true, force: true });
+    const lenis = lenisRef.current;
+    if (!lenis) return;
+    lenis.scrollTo(0, { immediate: true, force: true });
+    // The new page's content is in place by now; measure it rather than
+    // waiting for the observer to notice.
+    lenis.resize();
   }, [pathname]);
 
   return <LenisContext.Provider value={lenisRef}>{children}</LenisContext.Provider>;
