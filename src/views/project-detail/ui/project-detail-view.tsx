@@ -12,13 +12,20 @@ export async function ProjectDetailView({ slug }: { slug: string }) {
 
   const title = pickLocalized(project.title);
   const description = pickLocalized(project.description);
-  const navItems = [
+  const sections = [
     { id: "project-about", title: "О проекте" },
-    ...project.cases.map((caseItem) => ({
-      id: `case-${caseItem.id}`,
-      title: pickLocalized(caseItem.title),
-      numbered: true,
-    })),
+    ...(project.cases.length > 0
+      ? [
+          {
+            id: "project-cases",
+            title: "Кейсы",
+            children: project.cases.map((caseItem) => ({
+              id: `case-${caseItem.id}`,
+              title: pickLocalized(caseItem.title),
+            })),
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -41,7 +48,7 @@ export async function ProjectDetailView({ slug }: { slug: string }) {
         {project.cases.length > 0 && (
           <div className="mt-12 hidden lg:block">
             <p className="mb-3 text-sm text-[#8a8378]">Содержание</p>
-            <CaseNav items={navItems} />
+            <CaseNav sections={sections} />
           </div>
         )}
       </aside>
