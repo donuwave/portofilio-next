@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useRef, type ReactNode, type RefObject } from "react";
+import { usePathname } from "next/navigation";
 import gsap from "gsap";
 import Lenis from "lenis";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -60,6 +61,15 @@ export function SmoothScrollProvider({ children }: { children: ReactNode }) {
       lenisRef.current = null;
     };
   }, []);
+
+  // Navigating to another page while Lenis is still gliding after a scroll
+  // leaves it animating toward the old page's position: the new page opens
+  // part-way down, and its first wheel ticks only chip away at the stale
+  // target. A route change throws all of that away and starts from the top.
+  const pathname = usePathname();
+  useEffect(() => {
+    lenisRef.current?.scrollTo(0, { immediate: true, force: true });
+  }, [pathname]);
 
   return <LenisContext.Provider value={lenisRef}>{children}</LenisContext.Provider>;
 }
