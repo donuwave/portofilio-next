@@ -8,10 +8,9 @@ import { pickLocalized } from "@/shared/lib/localized-text";
 
 gsap.registerPlugin(ScrollTrigger);
 
-function formatRange(dateFrom: string, dateTo: string | null) {
-  const from = new Date(dateFrom).getFullYear();
-  const to = dateTo ? new Date(dateTo).getFullYear() : "наст. время";
-  return `${from} – ${to}`;
+// Under the start year: where the entry ends, or that it hasn't yet.
+function endLabel(dateTo: string | null) {
+  return dateTo ? `— ${new Date(dateTo).getFullYear()}` : "— наст. время";
 }
 
 export function ExperienceTimeline({ items }: { items: Experience[] }) {
@@ -110,9 +109,14 @@ export function ExperienceTimeline({ items }: { items: Experience[] }) {
       <ol aria-label="Опыт работы" className="relative space-y-[clamp(12rem,32vh,22rem)]">
       {items.map((item) => (
         <li key={item.id} data-experience-row className="flex items-center gap-3 sm:gap-4">
-          <p className="w-24 shrink-0 font-display text-[1.75rem] leading-none tracking-tight text-[#8a8378] sm:w-32 sm:text-4xl">
-            {new Date(item.dateFrom).getFullYear()}
-          </p>
+          <div className="w-24 shrink-0 sm:w-32">
+            <p className="font-display text-[1.75rem] leading-none tracking-tight text-[#8a8378] sm:text-4xl">
+              {new Date(item.dateFrom).getFullYear()}
+            </p>
+            <p className={`mt-2 text-xs leading-tight sm:text-sm ${item.dateTo ? "text-[#6f695f]" : "text-[#e2451f]"}`}>
+              {endLabel(item.dateTo)}
+            </p>
+          </div>
           <div data-experience-logo className="relative flex h-16 w-16 sm:h-20 sm:w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-[#3a372f] bg-[#1c1a17] text-2xl font-bold text-[#e2451f]">
             {item.logo ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -123,7 +127,7 @@ export function ExperienceTimeline({ items }: { items: Experience[] }) {
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-sm leading-relaxed text-[#b8b1a3] sm:text-base">
-              {formatRange(item.dateFrom, item.dateTo)} ({item.company}):
+              {item.company}
             </p>
             <p className="mt-2 text-xl leading-tight font-bold sm:text-2xl text-[#ece5d6]">{pickLocalized(item.position)}</p>
           </div>
