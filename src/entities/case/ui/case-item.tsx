@@ -2,16 +2,36 @@ import { pickLocalized } from "@/shared/lib/localized-text";
 import type { Case } from "../model/types";
 import { CaseMediaCarousel } from "./case-media-carousel";
 
-// The first sentence is what a skimmer should walk away with, so it's set
-// apart as a lead; the rest is the detail for anyone who keeps reading.
-function splitLead(text: string) {
-  const match = text.match(/^([\s\S]+?[.!?…])(\s+[\s\S]*)?$/);
-  return match ? { lead: match[1], rest: (match[2] ?? "").trim() } : { lead: text, rest: "" };
+type Block = { heading: string | null; text: string };
+
+/**
+ * A case's description is written as plain text with optional sub-headings,
+ * each on its own line as `## Heading` ("## Было", "## Что сделали"…). That
+ * keeps it editable as a single field in admin while letting the page set the
+ * headings apart. Text before the first heading — or a description with no
+ * headings at all — is shown as an unlabelled block.
+ */
+function parseBlocks(source: string): Block[] {
+  const blocks: Block[] = [];
+  let current: Block = { heading: null, text: "" };
+
+  for (const line of source.split("\n")) {
+    const heading = line.match(/^##\s+(.+?)\s*$/);
+    if (heading) {
+      if (current.heading !== null || current.text.trim()) blocks.push(current);
+      current = { heading: heading[1], text: "" };
+    } else {
+      current.text += `${line}\n`;
+    }
+  }
+  if (current.heading !== null || current.text.trim()) blocks.push(current);
+
+  return blocks.map((block) => ({ ...block, text: block.text.trim() })).filter((block) => block.text || block.heading);
 }
 
 export function CaseItem({ item, isLast = false }: { item: Case; isLast?: boolean }) {
   const title = pickLocalized(item.title);
-  const { lead, rest } = splitLead(pickLocalized(item.description));
+  const blocks = parseBlocks(pickLocalized(item.description));
 
   return (
     <article id={`case-${item.id}`} className={`border-t border-[#2a2824] py-14 first:border-t-0 first:pt-0 ${
@@ -20,8 +40,20 @@ export function CaseItem({ item, isLast = false }: { item: Case; isLast?: boolea
         isLast ? "lg:min-h-[calc(100vh-3rem)]" : ""
       }`}>
       <h2 className="font-display text-[clamp(1.5rem,2.4vw,2.25rem)] leading-[1.15] text-[#ece5d6]">{title}</h2>
-      <p className="mt-6 max-w-[44rem] text-[clamp(1.125rem,1.4vw,1.375rem)] leading-[1.5] text-[#ece5d6]">{lead}</p>
-      {rest && <p className="mt-5 max-w-[44rem] whitespace-pre-line leading-[1.75] text-[#b8b1a3]">{rest}</p>}
+
+      <div className="mt-8 max-w-[44rem] space-y-8">
+        {blocks.map((block, index) => (
+          <section key={index}>
+            {block.heading && <h3 className="text-lg font-medium text-[#e2451f]">{block.heading}</h3>}
+            {block.text && (
+              <p className={`whitespace-pre-line text-[1.0625rem] leading-[1.75] text-[#cfc8b8] ${block.heading ? "mt-2" : ""}`}>
+                {block.text}
+              </p>
+            )}
+          </section>
+        ))}
+      </div>
+
       {item.media.length > 0 && (
         <div className="mt-10">
           <CaseMediaCarousel media={item.media} title={title} />
