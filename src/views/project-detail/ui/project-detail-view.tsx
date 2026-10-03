@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getProjectBySlug } from "@/entities/project/api/get-project-by-slug";
 import { ProjectTag } from "@/entities/project/ui/project-tag";
 import { pickLocalized } from "@/shared/lib/localized-text";
+import { SectionHeading } from "@/shared/ui/section-heading";
 import { CaseNav } from "@/widgets/project-cases/ui/case-nav";
 import { ProjectCases } from "@/widgets/project-cases/ui/project-cases";
 
@@ -54,19 +55,20 @@ export async function ProjectDetailView({ slug }: { slug: string }) {
       </aside>
 
       <main className="mt-14 min-w-0 lg:mt-0">
-        {project.cover && (
-          <div className="aspect-[16/10] overflow-hidden rounded-sm bg-[#1a1816]">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={project.cover.path} alt={title} className="h-full w-full object-cover" />
-          </div>
-        )}
+        <div id="project-about">
+          <SectionHeading index={0} label="О проекте" />
 
-        <div id="project-about" className="mt-12 max-w-[44rem]">
-          <h2 className="text-sm text-[#8a8378]">О проекте</h2>
-          <p className="mt-4 whitespace-pre-line text-lg leading-[1.7] text-[#cfc8b8]">{description}</p>
+          {project.cover && (
+            <div className="mt-10 aspect-[16/10] overflow-hidden rounded-sm bg-[#1a1816]">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={project.cover.path} alt={title} className="h-full w-full object-cover" />
+            </div>
+          )}
+
+          <p className="mt-10 max-w-[44rem] whitespace-pre-line text-lg leading-[1.7] text-[#cfc8b8]">{description}</p>
         </div>
 
-        <div className="mt-20">
+        <div className="mt-28">
           <ProjectCases cases={project.cases} />
         </div>
       </main>
