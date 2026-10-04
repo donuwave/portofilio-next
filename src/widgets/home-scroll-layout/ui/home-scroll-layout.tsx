@@ -220,7 +220,9 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
         // formulas (nav pinned at right:48/top:40, the name+photo row centered at
         // 62% of the viewport height) at whatever the actual viewport size is,
         // rather than approximating it by hand. ---
-        const vw = window.innerWidth;
+        // Width without the scrollbar (innerWidth includes it, which would push the right-hand
+        // elements 12px under the custom scrollbar).
+        const vw = document.documentElement.clientWidth;
         const vh = window.innerHeight;
 
         // Measure name/surname at their real final (48px) size first, so the
@@ -347,7 +349,7 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
         // matching the old fixed hero nav — then eased back to identity so each
         // one visibly travels into its own spot in the wrapped grid.
         const navItems = navItemRefs.current.filter((el): el is HTMLSpanElement => el !== null);
-        const NAV_GAP = vw >= 1280 ? 24 : 16; // gap-x-6 : gap-x-4
+        const NAV_GAP = window.innerWidth >= 1280 ? 24 : 16; // gap-x-6 : gap-x-4
         const navItemRects = navItems.map(atTop);
         const navRowWidth =
           navItemRects.reduce((sum, r) => sum + r.width, 0) + NAV_GAP * Math.max(navItemRects.length - 1, 0);

@@ -8,9 +8,9 @@ import { useLenis } from "@/shared/lib/smooth-scroll-provider";
 export type NavChild = { id: string; title: string };
 export type NavSection = { id: string; title: string; children?: NavChild[] };
 
-// Matches the sticky column's own top offset (lg:top-12): a section lands
+// Matches the sticky column's own top offset (lg:top-24, below the fixed back link): a section lands
 // flush with the top of the content, level with the title on the left.
-const LAND_OFFSET = 48;
+const LAND_OFFSET = 96;
 
 // A section's own top padding and divider line sit above its content; landing
 // flush means lining up the content, not that padding.

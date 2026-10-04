@@ -37,7 +37,7 @@ export async function ProjectDetailView({ slug }: { slug: string }) {
     <div className="mx-auto max-w-[96rem] px-6 pb-28 pt-24 sm:px-12 lg:grid lg:grid-cols-[minmax(18rem,24rem)_minmax(0,1fr)] lg:gap-20 lg:pt-28">
       <PageBackLink href={localizePath("/projects", locale)}>{dict.projects.back}</PageBackLink>
 
-      <aside className="lg:sticky lg:top-12 lg:max-h-[calc(100vh-6rem)] lg:self-start lg:overflow-y-auto">
+      <aside className="lg:sticky lg:top-24 lg:max-h-[calc(100vh-8rem)] lg:self-start lg:overflow-y-auto">
         <div>
           <ProjectTag tag={project.tag} locale={locale} />
           <h1 className="mt-4 break-words font-display text-[clamp(1.25rem,1.75vw,1.75rem)] leading-[1.15] text-[#ece5d6]">

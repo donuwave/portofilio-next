@@ -87,3 +87,50 @@ html:has([data-site-root]) body {
   background: #141312;
   color-scheme: dark;
 }
+
+/* Scrollbars on the public site: a track a touch darker than the page, a slim rounded thumb in
+   the site's border colour, orange while dragged. Chrome/Safari use the -webkit- parts (which also
+   gives the thumb its inner padding); Firefox gets the standard properties. */
+html:has([data-site-root])::-webkit-scrollbar,
+[data-site-root] *::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+html:has([data-site-root])::-webkit-scrollbar-track,
+[data-site-root] *::-webkit-scrollbar-track {
+  background: #0e0d0c;
+}
+
+html:has([data-site-root])::-webkit-scrollbar-thumb,
+[data-site-root] *::-webkit-scrollbar-thumb {
+  background: #3a372f;
+  border: 3px solid #0e0d0c;
+  border-radius: 999px;
+  background-clip: padding-box;
+}
+
+html:has([data-site-root])::-webkit-scrollbar-thumb:hover,
+[data-site-root] *::-webkit-scrollbar-thumb:hover {
+  background: #5c584f;
+  background-clip: padding-box;
+}
+
+html:has([data-site-root])::-webkit-scrollbar-thumb:active,
+[data-site-root] *::-webkit-scrollbar-thumb:active {
+  background: #e2451f;
+  background-clip: padding-box;
+}
+
+html:has([data-site-root])::-webkit-scrollbar-corner,
+[data-site-root] *::-webkit-scrollbar-corner {
+  background: #0e0d0c;
+}
+
+@supports not selector(::-webkit-scrollbar) {
+  html:has([data-site-root]),
+  [data-site-root] * {
+    scrollbar-color: #3a372f #0e0d0c;
+    scrollbar-width: thin;
+  }
+}
