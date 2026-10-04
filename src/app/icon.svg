@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="14" fill="#141312"/>
+  <!-- the D, centred (its own box is x 8-47.5, y 12-52) and scaled up a little -->
+  <path fill="#ffffff" fill-rule="evenodd" transform="translate(32 32) scale(1.12) translate(-27.75 -32)" d="M8 12H25C39 12 47.5 20 47.5 32C47.5 44 39 52 25 52H8ZM19.5 22H24.5C32 22 36.5 26.5 36.5 32C36.5 37.5 32 42 24.5 42H19.5Z"/>
+</svg>
