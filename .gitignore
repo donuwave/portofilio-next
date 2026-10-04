@@ -34,6 +34,7 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 !.env.example
+!.env.prod.example
 
 # vercel
 .vercel
@@ -41,6 +42,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# deploy settings (server address)
+.deploy.env
 
 # uploaded media (local dev storage; real deploy uses a persistent volume on the VPS)
 /data/uploads/*

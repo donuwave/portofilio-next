@@ -1,0 +1,5 @@
+# Lets the build container push to the registry on the server through the SSH tunnel
+# (plain HTTP on a loopback-only port, so nothing leaves your machine unencrypted).
+[registry."host.docker.internal:5001"]
+  http = true
+  insecure = true
