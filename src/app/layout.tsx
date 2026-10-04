@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { indexingAllowed } from "@/lib/indexing";
 import { getLocale } from "@/shared/i18n/get-locale";
 import "./globals.css";
 
@@ -13,11 +14,14 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
-  title: "Daniil Tareev",
-  // Needed to turn the relative hreflang/canonical URLs of the public pages into absolute ones.
-  metadataBase: process.env.SITE_URL ? new URL(process.env.SITE_URL) : undefined,
-};
+export function generateMetadata(): Metadata {
+  return {
+    title: "Daniil Tareev",
+    // Needed to turn the relative hreflang/canonical URLs of the public pages into absolute ones.
+    metadataBase: process.env.SITE_URL ? new URL(process.env.SITE_URL) : undefined,
+    robots: indexingAllowed() ? { index: true, follow: true } : { index: false, follow: false, nocache: true },
+  };
+}
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   const locale = await getLocale();

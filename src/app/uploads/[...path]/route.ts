@@ -1,6 +1,7 @@
 import { readFile, stat } from "fs/promises";
 import path from "path";
 import { NextResponse } from "next/server";
+import { indexingAllowed, NOINDEX_HEADER } from "@/lib/indexing";
 import { getUploadsDir } from "@/lib/media-storage";
 
 export const runtime = "nodejs";
@@ -47,6 +48,7 @@ export async function GET(_request: Request, { params }: Params) {
         // An SVG can carry <script>; opened directly it would run on our origin. Sandbox it
         // (inside <img> scripts never run anyway).
         "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; sandbox",
+        ...(indexingAllowed() ? {} : { "X-Robots-Tag": NOINDEX_HEADER }),
       },
     });
   } catch {

@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { indexingAllowed, NOINDEX_HEADER } from "@/lib/indexing";
 import { SESSION_COOKIE_NAME, verifySessionToken } from "@/lib/session";
 import { DEFAULT_LOCALE, LOCALE_HEADER, LOCALES } from "@/shared/i18n/config";
 
@@ -43,6 +44,12 @@ function routeLocale(request: NextRequest) {
 }
 
 export async function proxy(request: NextRequest) {
+  const response = await handle(request);
+  if (!indexingAllowed()) response.headers.set("X-Robots-Tag", NOINDEX_HEADER);
+  return response;
+}
+
+async function handle(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   const isApiRoute = pathname.startsWith("/api/");

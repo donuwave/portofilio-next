@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { indexingAllowed } from "@/lib/indexing";
 import { DEFAULT_LOCALE, LOCALES, type Locale } from "./config";
 import { localizePath } from "./localize-path";
 
@@ -8,7 +9,8 @@ import { localizePath } from "./localize-path";
  * so without it nothing is emitted.
  */
 export function localeAlternates(path: string, locale: Locale): Metadata["alternates"] {
-  if (!process.env.SITE_URL) return undefined;
+  // A canonical URL on a page that says noindex would contradict itself.
+  if (!process.env.SITE_URL || !indexingAllowed()) return undefined;
   return {
     canonical: localizePath(path, locale),
     languages: {
