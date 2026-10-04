@@ -1,21 +1,25 @@
 import Link from "next/link";
+import { localizePath } from "@/shared/i18n/localize-path";
+import type { Locale } from "@/shared/i18n/config";
 import { pickLocalized } from "@/shared/lib/localized-text";
 import type { Project } from "../model/types";
 
 export function ProjectCard({
   project,
   headingLevel: Heading = "h2",
+  locale,
 }: {
   project: Project;
+  locale: Locale;
   headingLevel?: "h2" | "h3";
 }) {
-  const title = pickLocalized(project.title);
-  const description = pickLocalized(project.description);
-  const tag = project.tag ? pickLocalized(project.tag) : null;
+  const title = pickLocalized(project.title, locale);
+  const description = pickLocalized(project.description, locale);
+  const tag = project.tag ? pickLocalized(project.tag, locale) : null;
 
   return (
     <Link
-      href={`/projects/${project.slug}`}
+      href={localizePath(`/projects/${project.slug}`, locale)}
       className="group block min-w-0 focus-visible:outline-2 focus-visible:outline-offset-8 focus-visible:outline-[#e2451f]"
     >
       {project.cover && (

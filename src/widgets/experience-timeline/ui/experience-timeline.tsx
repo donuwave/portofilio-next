@@ -4,16 +4,18 @@ import { useLayoutEffect, useRef } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import type { Experience } from "@/entities/experience/model/types";
+import { useDictionary, useLocale } from "@/shared/i18n/locale-provider";
+import { FramedImage } from "@/shared/ui/framed-image";
 import { pickLocalized } from "@/shared/lib/localized-text";
 
 gsap.registerPlugin(ScrollTrigger);
 
-// Under the start year: where the entry ends, or that it hasn't yet.
-function endLabel(dateTo: string | null) {
-  return dateTo ? `— ${new Date(dateTo).getFullYear()}` : "— наст. время";
-}
-
 export function ExperienceTimeline({ items }: { items: Experience[] }) {
+  const dict = useDictionary();
+  const locale = useLocale();
+  // Under the start year: where the entry ends, or that it hasn't yet.
+  const endLabel = (dateTo: string | null) =>
+    `— ${dateTo ? new Date(dateTo).getFullYear() : dict.experience.present}`;
   const rootRef = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
@@ -106,7 +108,7 @@ export function ExperienceTimeline({ items }: { items: Experience[] }) {
           <path key={item.id} data-experience-path stroke="#e2451f" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
         ))}
       </svg>
-      <ol aria-label="Опыт работы" className="relative space-y-[clamp(12rem,32vh,22rem)]">
+      <ol aria-label={dict.experience.listLabel} className="relative space-y-[clamp(12rem,32vh,22rem)]">
       {items.map((item) => (
         <li key={item.id} data-experience-row className="flex items-center gap-3 sm:gap-4">
           <div className="w-24 shrink-0 sm:w-32">
@@ -119,17 +121,27 @@ export function ExperienceTimeline({ items }: { items: Experience[] }) {
           </div>
           <div data-experience-logo className="relative flex h-16 w-16 sm:h-20 sm:w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-[#3a372f] bg-[#1c1a17] text-2xl font-bold text-[#e2451f]">
             {item.logo ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={item.logo.path} alt={item.company} className="h-full w-full object-cover" />
+              <FramedImage {...item.logo} alt={item.company} />
             ) : (
               item.company.slice(0, 1).toUpperCase()
             )}
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-sm leading-relaxed text-[#b8b1a3] sm:text-base">
-              {item.company}
+              {item.url ? (
+                <a
+                  href={item.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline decoration-[#3a372f] underline-offset-4 transition-colors hover:text-[#e2451f] hover:decoration-[#e2451f]"
+                >
+                  {item.company} <span aria-hidden>↗</span>
+                </a>
+              ) : (
+                item.company
+              )}
             </p>
-            <p className="mt-2 text-xl leading-tight font-bold sm:text-2xl text-[#ece5d6]">{pickLocalized(item.position)}</p>
+            <p className="mt-2 text-xl leading-tight font-bold sm:text-2xl text-[#ece5d6]">{pickLocalized(item.position, locale)}</p>
           </div>
         </li>
       ))}

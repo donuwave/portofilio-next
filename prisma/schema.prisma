@@ -50,6 +50,12 @@ model Experience {
   order       Int       @default(0)
   logoId      String?
   logo        Media?    @relation(fields: [logoId], references: [id])
+  // How the logo sits inside its square frame: zoom factor and pan offset (fractions of the frame size).
+  // Optional link to the company / school site, opened in a new tab.
+  url         String?
+  logoZoom    Float     @default(1)
+  logoX       Float     @default(0)
+  logoY       Float     @default(0)
 
   @@index([profileId])
 }
@@ -114,6 +120,10 @@ model CaseMedia {
   mediaId String
   media   Media  @relation(fields: [mediaId], references: [id], onDelete: Restrict)
   order   Int    @default(0)
+  // How an image sits in the slider frame: zoom factor and pan offset (fractions of the frame size).
+  zoom    Float  @default(1)
+  offsetX Float  @default(0)
+  offsetY Float  @default(0)
 
   @@id([caseId, mediaId])
   @@index([mediaId])
@@ -125,6 +135,8 @@ model ContactRequest {
   contact   String
   message   String
   read      Boolean  @default(false)
+  // When the sender ticked the personal-data consent box (152-FZ).
+  consentAt DateTime?
   createdAt DateTime @default(now())
 
   @@index([createdAt])

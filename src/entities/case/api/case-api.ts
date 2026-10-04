@@ -41,6 +41,18 @@ export function removeCaseMedia(caseId: string, mediaId: string): Promise<void> 
   return apiFetch<void>(`/api/cases/${caseId}/media/${mediaId}`, { method: "DELETE" });
 }
 
+export function updateCaseMediaFraming(
+  caseId: string,
+  mediaId: string,
+  framing: { zoom: number; offsetX: number; offsetY: number }
+): Promise<CaseMediaEntry> {
+  return apiFetch<CaseMediaEntry>(`/api/cases/${caseId}/media/${mediaId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(framing),
+  });
+}
+
 export function reorderCaseMedia(caseId: string, mediaIds: string[]): Promise<CaseMediaEntry[]> {
   return apiFetch<CaseMediaEntry[]>(`/api/cases/${caseId}/media`, {
     method: "PUT",

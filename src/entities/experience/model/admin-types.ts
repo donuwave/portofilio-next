@@ -10,8 +10,12 @@ export type ExperienceAdmin = {
   dateTo: string | null;
   description: LocalizedText;
   order: number;
+  url: string | null;
   logoId: string | null;
   logo: Media | null;
+  logoZoom: number;
+  logoX: number;
+  logoY: number;
 };
 
 export type ExperienceCreateInput = Omit<ExperienceAdmin, "id" | "logo">;

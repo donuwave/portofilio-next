@@ -17,5 +17,8 @@ export type CaseMediaEntry = {
   caseId: string;
   mediaId: string;
   order: number;
+  zoom: number;
+  offsetX: number;
+  offsetY: number;
   media: Media;
 };

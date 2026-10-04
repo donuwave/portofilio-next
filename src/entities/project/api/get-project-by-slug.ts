@@ -32,6 +32,9 @@ export const getProjectBySlug = cache(async (slug: string): Promise<ProjectDetai
         id: caseMedia.media.id,
         type: caseMedia.media.type,
         path: caseMedia.media.path,
+        zoom: caseMedia.zoom,
+        x: caseMedia.offsetX,
+        y: caseMedia.offsetY,
       })),
     })),
   };

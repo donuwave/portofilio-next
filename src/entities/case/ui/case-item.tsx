@@ -1,3 +1,4 @@
+import type { Locale } from "@/shared/i18n/config";
 import { pickLocalized } from "@/shared/lib/localized-text";
 import type { Case } from "../model/types";
 import { CaseMediaCarousel } from "./case-media-carousel";
@@ -29,9 +30,9 @@ function parseBlocks(source: string): Block[] {
   return blocks.map((block) => ({ ...block, text: block.text.trim() })).filter((block) => block.text || block.heading);
 }
 
-export function CaseItem({ item, isLast = false }: { item: Case; isLast?: boolean }) {
-  const title = pickLocalized(item.title);
-  const blocks = parseBlocks(pickLocalized(item.description));
+export function CaseItem({ item, locale, isLast = false }: { item: Case; locale: Locale; isLast?: boolean }) {
+  const title = pickLocalized(item.title, locale);
+  const blocks = parseBlocks(pickLocalized(item.description, locale));
 
   return (
     <article id={`case-${item.id}`} className={`border-t border-[#2a2824] py-14 first:border-t-0 first:pt-0 ${

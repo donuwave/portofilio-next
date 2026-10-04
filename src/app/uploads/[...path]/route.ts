@@ -12,6 +12,7 @@ const CONTENT_TYPES: Record<string, string> = {
   ".webp": "image/webp",
   ".gif": "image/gif",
   ".avif": "image/avif",
+  ".svg": "image/svg+xml",
   ".mp4": "video/mp4",
   ".webm": "video/webm",
   ".mov": "video/quicktime",
@@ -42,6 +43,10 @@ export async function GET(_request: Request, { params }: Params) {
         "Content-Type": contentType,
         // Filenames are randomly generated per upload and never reused or mutated.
         "Cache-Control": "public, max-age=31536000, immutable",
+        "X-Content-Type-Options": "nosniff",
+        // An SVG can carry <script>; opened directly it would run on our origin. Sandbox it
+        // (inside <img> scripts never run anyway).
+        "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; sandbox",
       },
     });
   } catch {

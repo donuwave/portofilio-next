@@ -19,6 +19,10 @@ export async function apiFetch<T = void>(input: string, init?: RequestInit): Pro
       const body = await res.json();
       if (typeof body?.error === "string") message = body.error;
       details = body?.details;
+      // Validation errors: say which field and why, not just "Validation failed".
+      const fieldErrors = (details as { fieldErrors?: Record<string, string[]> } | undefined)?.fieldErrors;
+      const first = fieldErrors && Object.entries(fieldErrors).find(([, errors]) => errors?.length);
+      if (first) message = `${first[0]}: ${first[1][0]}`;
     } catch {
       // response body wasn't JSON; fall back to statusText
     }

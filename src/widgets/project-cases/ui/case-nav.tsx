@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useDictionary } from "@/shared/i18n/locale-provider";
 import { useLenis } from "@/shared/lib/smooth-scroll-provider";
 
 /** `id` is the id of the element the row scrolls to and tracks. */
@@ -35,6 +36,7 @@ function lastReached(ids: string[]) {
  * The section being read and, inside it, the case being read are highlighted.
  */
 export function CaseNav({ sections }: { sections: NavSection[] }) {
+  const dict = useDictionary();
   const lenisRef = useLenis();
   const [activeSection, setActiveSection] = useState(sections[0]?.id ?? "");
   const [activeChild, setActiveChild] = useState<string | null>(null);
@@ -64,7 +66,7 @@ export function CaseNav({ sections }: { sections: NavSection[] }) {
   }
 
   return (
-    <nav aria-label="Содержание проекта">
+    <nav aria-label={dict.projects.contentsLabel}>
       <ol className="space-y-1">
         {sections.map((section, index) => {
           const isActive = section.id === activeSection;

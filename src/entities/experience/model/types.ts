@@ -7,5 +7,6 @@ export type Experience = {
   dateFrom: string;
   dateTo: string | null;
   description: LocalizedText;
-  logo: { path: string } | null;
+  url: string | null;
+  logo: { path: string; zoom: number; x: number; y: number } | null;
 };

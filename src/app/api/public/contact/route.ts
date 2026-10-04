@@ -24,11 +24,13 @@ export async function POST(request: Request) {
     const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
     rateLimit(ip);
 
-    const { website, ...data } = contactRequestSchema.parse(await parseJsonBody(request));
+    const parsed = contactRequestSchema.parse(await parseJsonBody(request));
     // A filled honeypot is a bot. Answer as if it worked so it doesn't retry.
-    if (website) return NextResponse.json({ ok: true }, { status: 201 });
+    if (parsed.website) return NextResponse.json({ ok: true }, { status: 201 });
 
-    await prisma.contactRequest.create({ data });
+    // The schema only lets consent: true through, so reaching here means it was given.
+    const data = { name: parsed.name, contact: parsed.contact, message: parsed.message };
+    await prisma.contactRequest.create({ data: { ...data, consentAt: new Date() } });
     await notifyTelegram(`Новая заявка с сайта\n\nИмя: ${data.name}\nКонтакт: ${data.contact}\n\n${data.message}`);
 
     return NextResponse.json({ ok: true }, { status: 201 });

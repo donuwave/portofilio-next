@@ -4,6 +4,9 @@ export type CaseMediaItem = {
   id: string;
   type: "image" | "video";
   path: string;
+  zoom: number;
+  x: number;
+  y: number;
 };
 
 export type Case = {

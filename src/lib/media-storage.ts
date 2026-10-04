@@ -9,6 +9,7 @@ const ALLOWED_MIME_TYPES: Record<string, MediaType> = {
   "image/webp": "image",
   "image/gif": "image",
   "image/avif": "image",
+  "image/svg+xml": "image",
   "video/mp4": "video",
   "video/webm": "video",
   "video/quicktime": "video",
@@ -31,7 +32,8 @@ export async function saveUploadedFile(file: File) {
   const uploadsDir = getUploadsDir();
   await mkdir(uploadsDir, { recursive: true });
 
-  const ext = path.extname(file.name) || defaultExtension(file.type);
+  // SVG is served from our origin, so never let the client-supplied name decide its extension.
+  const ext = file.type === "image/svg+xml" ? ".svg" : path.extname(file.name) || defaultExtension(file.type);
   const generatedName = `${randomUUID()}${ext}`;
   const diskPath = path.join(uploadsDir, generatedName);
 
@@ -68,6 +70,7 @@ function defaultExtension(mimeType: string) {
     "image/webp": ".webp",
     "image/gif": ".gif",
     "image/avif": ".avif",
+    "image/svg+xml": ".svg",
     "video/mp4": ".mp4",
     "video/webm": ".webm",
     "video/quicktime": ".mov",

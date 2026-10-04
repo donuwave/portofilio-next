@@ -8,8 +8,10 @@ import { ApiClientError } from "@/shared/api/http";
 import type { LocalizedText } from "@/shared/lib/localized-text";
 import { Button } from "@/shared/ui/button";
 import { Field } from "@/shared/ui/field";
+import { FramedImage } from "@/shared/ui/framed-image";
 import { Input } from "@/shared/ui/input";
 import { LocalizedTextField } from "@/shared/ui/localized-text-field";
+import { ImageFramer } from "@/widgets/image-framer/ui/image-framer";
 import { MediaPickerField } from "@/widgets/media-picker-field/ui/media-picker-field";
 
 const EMPTY_LOCALIZED: LocalizedText = { ru: "", en: "" };
@@ -26,34 +28,46 @@ function formatRange(dateFrom: string, dateTo: string | null) {
 
 type FormState = {
   company: string;
+  url: string;
   position: LocalizedText;
   dateFrom: string;
   dateTo: string;
   description: LocalizedText;
   logoId: string | null;
   logo: ExperienceAdmin["logo"];
+  logoZoom: number;
+  logoX: number;
+  logoY: number;
 };
 
 function toFormState(entry: ExperienceAdmin | null): FormState {
   if (!entry) {
     return {
       company: "",
+      url: "",
       position: EMPTY_LOCALIZED,
       dateFrom: "",
       dateTo: "",
       description: EMPTY_LOCALIZED,
       logoId: null,
       logo: null,
+      logoZoom: 1,
+      logoX: 0,
+      logoY: 0,
     };
   }
   return {
     company: entry.company,
+    url: entry.url ?? "",
     position: entry.position,
     dateFrom: toDateInputValue(entry.dateFrom),
     dateTo: entry.dateTo ? toDateInputValue(entry.dateTo) : "",
     description: entry.description,
     logoId: entry.logoId,
     logo: entry.logo,
+    logoZoom: entry.logoZoom,
+    logoX: entry.logoX,
+    logoY: entry.logoY,
   };
 }
 
@@ -83,11 +97,15 @@ function ExperienceForm({
     try {
       const payload: ExperienceCreateInput = {
         company: form.company,
+        url: form.url.trim() || null,
         position: form.position,
         dateFrom: form.dateFrom,
         dateTo: form.dateTo || null,
         description: form.description,
         logoId: form.logoId,
+        logoZoom: form.logoZoom,
+        logoX: form.logoX,
+        logoY: form.logoY,
         order: initial?.order ?? nextOrder,
       };
       if (initial) {
@@ -109,12 +127,30 @@ function ExperienceForm({
         <Input value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} required />
       </Field>
 
+      <Field label="Ссылка на сайт (откроется в новой вкладке)">
+        <Input
+          type="url"
+          placeholder="https://..."
+          value={form.url}
+          onChange={(e) => setForm({ ...form, url: e.target.value })}
+        />
+      </Field>
+
       <Field label="Логотип">
         <MediaPickerField
           type="image"
           value={form.logo}
-          onChange={(media) => setForm({ ...form, logo: media, logoId: media?.id ?? null })}
+          onChange={(media) => setForm({ ...form, logo: media, logoId: media?.id ?? null, logoZoom: 1, logoX: 0, logoY: 0 })}
         />
+        {form.logo && (
+          <ImageFramer
+            path={form.logo.path}
+            zoom={form.logoZoom}
+            x={form.logoX}
+            y={form.logoY}
+            onChange={({ zoom, x, y }) => setForm((f) => ({ ...f, logoZoom: zoom, logoX: x, logoY: y }))}
+          />
+        )}
       </Field>
 
       <LocalizedTextField
@@ -236,10 +272,15 @@ export function AdminExperienceList() {
               key={entry.id}
               className="flex items-center gap-4 rounded-md border border-zinc-200 p-3 dark:border-zinc-800"
             >
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-md border border-zinc-300 bg-zinc-100 text-sm font-medium text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900">
+              <div className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-md border border-zinc-300 bg-zinc-100 text-sm font-medium text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900">
                 {entry.logo ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={entry.logo.path} alt={entry.company} className="h-full w-full object-cover" />
+                  <FramedImage
+                    path={entry.logo.path}
+                    zoom={entry.logoZoom}
+                    x={entry.logoX}
+                    y={entry.logoY}
+                    alt={entry.company}
+                  />
                 ) : (
                   entry.company.slice(0, 1).toUpperCase()
                 )}

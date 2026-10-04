@@ -30,7 +30,8 @@ export const getProfile = cache(async (): Promise<Profile | null> => {
       dateFrom: e.dateFrom.toISOString(),
       dateTo: e.dateTo ? e.dateTo.toISOString() : null,
       description: e.description as unknown as LocalizedText,
-      logo: e.logo ? { path: e.logo.path } : null,
+      url: e.url,
+      logo: e.logo ? { path: e.logo.path, zoom: e.logoZoom, x: e.logoX, y: e.logoY } : null,
     })),
   };
 });

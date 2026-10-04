@@ -2,7 +2,11 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import gsap from "gsap";
+import { useDictionary } from "@/shared/i18n/locale-provider";
+import { format } from "@/shared/i18n/localize-path";
+import { FramedImage } from "@/shared/ui/framed-image";
 import type { CaseMediaItem } from "../model/types";
+import { CaseLightbox } from "./case-lightbox";
 
 // Dragging past this fraction of the viewport's own width counts as a
 // committed swipe, regardless of screen size.
@@ -12,11 +16,15 @@ const DRAG_START = 6;
 const AUTOPLAY_MS = 5000;
 
 export function CaseMediaCarousel({ media, title }: { media: CaseMediaItem[]; title: string }) {
+  const dict = useDictionary().media;
   const [index, setIndex] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
   const drag = useRef<{ startX: number; id: number; dragging: boolean } | null>(null);
   const suppressClick = useRef(false);
+  const [lightboxId, setLightboxId] = useState<string | null>(null);
+  const images = media.filter((item) => item.type === "image");
+  const lightboxIndex = images.findIndex((item) => item.id === lightboxId);
 
   // Autoplay only runs while nobody is interacting and the slider can be
   // seen: pointer over it, keyboard focus inside, a drag in progress, a video
@@ -60,7 +68,7 @@ export function CaseMediaCarousel({ media, title }: { media: CaseMediaItem[]; ti
     return () => observer.disconnect();
   }, []);
 
-  const playing = media.length > 1 && visible && !hovered && !focused && !dragging && !videoPlaying;
+  const playing = media.length > 1 && visible && !hovered && !focused && !dragging && !videoPlaying && lightboxId === null;
 
   useEffect(() => {
     if (!playing || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -116,11 +124,11 @@ export function CaseMediaCarousel({ media, title }: { media: CaseMediaItem[]; ti
   return (
     <div
       ref={containerRef}
-      className="relative aspect-[16/10] w-full overflow-hidden rounded-sm bg-[#0d0c0a] outline-none"
+      className="relative aspect-[21/10] w-full overflow-hidden rounded-sm bg-[#0d0c0a] outline-none"
       tabIndex={0}
       role="group"
       aria-roledescription="carousel"
-      aria-label={`Медиа кейса «${title}», слайд ${index + 1} из ${media.length}`}
+      aria-label={format(dict.carouselLabel, { title, index: index + 1, total: media.length })}
       onKeyDown={handleKeyDown}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
@@ -145,10 +153,13 @@ export function CaseMediaCarousel({ media, title }: { media: CaseMediaItem[]; ti
     >
       <div ref={trackRef} className="flex h-full cursor-grab touch-pan-y select-none active:cursor-grabbing">
         {media.map((item) => (
-          <div key={item.id} className="h-full w-full shrink-0">
+          <div
+            key={item.id}
+            className={`relative h-full w-full shrink-0 overflow-hidden ${item.type === "image" ? "cursor-zoom-in" : ""}`}
+            onClick={() => item.type === "image" && setLightboxId(item.id)}
+          >
             {item.type === "image" ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={item.path} alt={title} draggable={false} className="h-full w-full object-cover" />
+              <FramedImage path={item.path} alt={title} zoom={item.zoom} x={item.x} y={item.y} />
             ) : (
               <video
                 src={item.path}
@@ -163,13 +174,37 @@ export function CaseMediaCarousel({ media, title }: { media: CaseMediaItem[]; ti
         ))}
       </div>
 
+      {images.length > 0 && (
+        <button
+          type="button"
+          onClick={() => {
+            const current = media[index];
+            setLightboxId((current.type === "image" ? current : images[0]).id);
+          }}
+          aria-label={dict.openFullscreen}
+          className="absolute left-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-[#141312]/70 text-[#ece5d6] transition-colors hover:text-[#e2451f] sm:left-6 sm:top-5"
+        >
+          ⛶
+        </button>
+      )}
+
+      {lightboxIndex >= 0 && (
+        <CaseLightbox
+          images={images}
+          index={lightboxIndex}
+          title={title}
+          onIndexChange={(i) => setLightboxId(images[i].id)}
+          onClose={() => setLightboxId(null)}
+        />
+      )}
+
       {media.length > 1 && (
         <>
           <button
             type="button"
             onClick={() => snapTo(index - 1)}
             disabled={index === 0}
-            aria-label="Предыдущий слайд"
+            aria-label={dict.prevSlide}
             className="absolute left-4 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-[#141312]/70 text-[#ece5d6] transition-colors hover:text-[#e2451f] disabled:opacity-30 sm:left-6"
           >
             ←
@@ -178,7 +213,7 @@ export function CaseMediaCarousel({ media, title }: { media: CaseMediaItem[]; ti
             type="button"
             onClick={() => snapTo(index + 1)}
             disabled={index === media.length - 1}
-            aria-label="Следующий слайд"
+            aria-label={dict.nextSlide}
             className="absolute right-4 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-[#141312]/70 text-[#ece5d6] transition-colors hover:text-[#e2451f] disabled:opacity-30 sm:right-6"
           >
             →
@@ -190,7 +225,7 @@ export function CaseMediaCarousel({ media, title }: { media: CaseMediaItem[]; ti
                 key={item.id}
                 type="button"
                 onClick={() => snapTo(i)}
-                aria-label={`Слайд ${i + 1}`}
+                aria-label={format(dict.slide, { index: i + 1 })}
                 className="flex h-6 items-center"
               >
                 <span

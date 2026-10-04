@@ -8,6 +8,7 @@ import {
   fetchCaseMedia,
   fetchCasesAdmin,
   removeCaseMedia,
+  updateCaseMediaFraming,
   updateCase,
 } from "@/entities/case/api/case-api";
 import type { CaseAdmin, CaseCreateInput, CaseMediaEntry } from "@/entities/case/model/admin-types";
@@ -16,6 +17,7 @@ import { ApiClientError } from "@/shared/api/http";
 import type { LocalizedText } from "@/shared/lib/localized-text";
 import { Button } from "@/shared/ui/button";
 import { LocalizedTextField } from "@/shared/ui/localized-text-field";
+import { ImageFramer } from "@/widgets/image-framer/ui/image-framer";
 import { MediaPicker } from "@/widgets/media-picker/ui/media-picker";
 
 const EMPTY_LOCALIZED: LocalizedText = { ru: "", en: "" };
@@ -24,6 +26,30 @@ function CaseMediaManager({ caseId }: { caseId: string }) {
   const [items, setItems] = useState<CaseMediaEntry[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [framing, setFraming] = useState({ zoom: 1, x: 0, y: 0 });
+  const [isSavingFraming, setIsSavingFraming] = useState(false);
+
+  function startEditing(item: CaseMediaEntry) {
+    setEditingId(item.mediaId);
+    setFraming({ zoom: item.zoom, x: item.offsetX, y: item.offsetY });
+  }
+
+  async function saveFraming(mediaId: string) {
+    setIsSavingFraming(true);
+    setError(null);
+    try {
+      await updateCaseMediaFraming(caseId, mediaId, { zoom: framing.zoom, offsetX: framing.x, offsetY: framing.y });
+      setEditingId(null);
+      load();
+    } catch (err) {
+      setError(err instanceof ApiClientError ? err.message : "Не удалось сохранить кадрирование");
+    } finally {
+      setIsSavingFraming(false);
+    }
+  }
+
+  const editingItem = items?.find((item) => item.mediaId === editingId) ?? null;
 
   function load() {
     fetchCaseMedia(caseId)
@@ -61,8 +87,21 @@ function CaseMediaManager({ caseId }: { caseId: string }) {
         {items?.map((item) => (
           <div key={item.mediaId} className="relative h-20 w-20">
             {item.media.type === "image" ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={item.media.path} alt="" className="h-full w-full rounded-md border border-zinc-300 object-cover dark:border-zinc-700" />
+              <button
+                type="button"
+                onClick={() => startEditing(item)}
+                title="Кадрировать"
+                className="block h-full w-full"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={item.media.path}
+                  alt=""
+                  className={`h-full w-full rounded-md border object-cover ${
+                    item.mediaId === editingId ? "border-[#e2451f]" : "border-zinc-300 dark:border-zinc-700"
+                  }`}
+                />
+              </button>
             ) : (
               <video src={item.media.path} className="h-full w-full rounded-md border border-zinc-300 object-cover dark:border-zinc-700" />
             )}
@@ -84,6 +123,27 @@ function CaseMediaManager({ caseId }: { caseId: string }) {
           + Добавить
         </button>
       </div>
+      {editingItem && (
+        <div className="mt-3 rounded-md border border-zinc-200 p-3 dark:border-zinc-800">
+          <p className="text-xs text-zinc-500">Кадрирование: так картинка будет выглядеть в слайдере кейса.</p>
+          <ImageFramer
+            path={editingItem.media.path}
+            frameClassName="aspect-[21/10] w-full max-w-xl"
+            zoom={framing.zoom}
+            x={framing.x}
+            y={framing.y}
+            onChange={setFraming}
+          />
+          <div className="mt-3 flex gap-2">
+            <Button type="button" onClick={() => saveFraming(editingItem.mediaId)} disabled={isSavingFraming}>
+              {isSavingFraming ? "Сохранение..." : "Сохранить"}
+            </Button>
+            <Button type="button" variant="secondary" onClick={() => setEditingId(null)} disabled={isSavingFraming}>
+              Отмена
+            </Button>
+          </div>
+        </div>
+      )}
       <MediaPicker open={pickerOpen} onClose={() => setPickerOpen(false)} onSelect={handleAdd} />
     </div>
   );

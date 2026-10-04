@@ -9,7 +9,8 @@ import type { Project } from "@/entities/project/model/types";
 import { ProfilePhoto } from "@/entities/profile/ui/profile-photo";
 import { NAV_ITEMS } from "@/shared/config/nav-items";
 import { SOCIAL_LINKS } from "@/shared/config/social-links";
-import { TAGLINE_PHRASES } from "@/shared/config/tagline-phrases";
+import { useCookieConsent } from "@/features/cookie-consent/ui/cookie-consent";
+import { useDictionary, useLocale, useLocalizedPath } from "@/shared/i18n/locale-provider";
 import { pickLocalized } from "@/shared/lib/localized-text";
 import { useLenis } from "@/shared/lib/smooth-scroll-provider";
 import { splitName } from "@/shared/lib/split-name";
@@ -24,41 +25,6 @@ import { ExperienceTimeline } from "@/widgets/experience-timeline/ui/experience-
 import { ProjectsShowcase } from "@/widgets/projects-showcase/ui/projects-showcase";
 
 gsap.registerPlugin(ScrollTrigger, SplitText);
-
-// What a client can hire for, each scannable on its own.
-const SERVICES = [
-  {
-    title: "Фронтенд под ключ",
-    text: "От вёрстки до сложных интерактивных модулей, карт и интеграций со сторонними сервисами.",
-  },
-  {
-    title: "Серверная часть",
-    text: "API на Node.js и NestJS, работа с базами данных и внешними системами.",
-  },
-  {
-    title: "Боты и автоматизация",
-    text: "Telegram-боты и скрипты, которые снимают с команды повторяющуюся рутину.",
-  },
-];
-
-const CONTACT_EMAIL = "dtareev123@gmail.com";
-const CONTACT_BUTTONS = [
-  {
-    label: "Telegram",
-    href: SOCIAL_LINKS.find((link) => link.icon === "telegram")?.href ?? "#",
-    icon: <SocialIcon name="telegram" className="h-4 w-4" />,
-  },
-  {
-    label: "Почта",
-    href: `mailto:${CONTACT_EMAIL}`,
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4" aria-hidden="true">
-        <rect x="3" y="5" width="18" height="14" rx="2" />
-        <path d="m4 7 8 6 8-6" />
-      </svg>
-    ),
-  },
-];
 
 // Uppercase text renders "i" as a dotless capital I, swallowing the dot — this
 // stands two decorative dots back in above the first "ii" it finds. Each dot
@@ -109,6 +75,10 @@ function NameWithDots({
 }
 
 export function HomeScrollLayout({ profile, projects }: { profile: Profile; projects: Project[] }) {
+  const dict = useDictionary();
+  const locale = useLocale();
+  const localizedPath = useLocalizedPath();
+  const cookieConsent = useCookieConsent();
   const sectionRef = useRef<HTMLDivElement>(null);
   const sidebarRef = useRef<HTMLDivElement>(null);
 
@@ -136,7 +106,6 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
   // own only after the travelling pieces have settled, per the "don't replace
   // what's already there" rule.
   const descRef = useRef<HTMLParagraphElement>(null);
-  const emailRef = useRef<HTMLAnchorElement>(null);
 
   const leftColumnRef = useRef<HTMLDivElement>(null);
   // leftColumnRef's own top edge sits at the very top of the page regardless
@@ -172,7 +141,7 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
 
   const { first, rest } = splitName(profile.name);
   const tag = profile.skills.slice(0, 3).join(" / ").toUpperCase();
-  const position = profile.currentJobPosition ? pickLocalized(profile.currentJobPosition) : null;
+  const position = profile.currentJobPosition ? pickLocalized(profile.currentJobPosition, locale) : null;
 
   // Bumped once a resize settles, to rebuild the hero layout at the new size.
   const [layoutKey, setLayoutKey] = useState(0);
@@ -389,7 +358,7 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
           navCursor += rect.width + NAV_GAP;
         });
 
-        gsap.set([descRef.current, emailRef.current], { autoAlpha: 0, y: 16 });
+        gsap.set(descRef.current, { autoAlpha: 0, y: 16 });
 
         // The sidebar/tag/scroll-hint default to invisible (lg:invisible in
         // the JSX) precisely so the server-rendered markup — final-size text,
@@ -432,8 +401,7 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
           // they move), but ease in slowly so most of their motion lands after the
           // nav has cleared out of the way, avoiding a visible collision.
           .to(socialRef.current, { x: 0, y: 0, ease: "power3.in", duration: 0.9 }, LINE_DRAWN + 0.06)
-          .to(descRef.current, { autoAlpha: 1, y: 0, ease: "power2.out", duration: 0.25 }, LINE_DRAWN + 1.1)
-          .to(emailRef.current, { autoAlpha: 1, y: 0, ease: "power2.out", duration: 0.25 }, LINE_DRAWN + 1.2);
+          .to(descRef.current, { autoAlpha: 1, y: 0, ease: "power2.out", duration: 0.25 }, LINE_DRAWN + 1.1);
 
         // Each nav item is its own frame with a wide staggered start and a short
         // duration, so they arrive one after another — only one or two ever in
@@ -458,7 +426,7 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
         const backTl = gsap.timeline({ paused: true });
         backTl
           // Sidebar-only text has nowhere to travel, so it just clears out.
-          .to([descRef.current, emailRef.current], { autoAlpha: 0, y: 16, duration: 0.2 }, 0)
+          .to(descRef.current, { autoAlpha: 0, y: 16, duration: 0.2 }, 0)
           .to(nameRef.current, { ...heroOf(nameRef.current, ["x", "y", "fontSize"]), ease: "power2.out", duration: 0.5 }, 0.02)
           .to(surnameRef.current, { ...heroOf(surnameRef.current, ["x", "y", "fontSize"]), ease: "power2.out", duration: 0.5 }, 0.06)
           .to(underlineWrapRef.current, { ...heroOf(underlineWrapRef.current, ["x", "y", "width"]), ease: "power2.out", duration: 0.5 }, 0.04)
@@ -978,7 +946,7 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
           className="px-6 pt-10 sm:px-12 lg:invisible lg:fixed lg:left-12 lg:top-10 lg:z-10 lg:bg-[#141312] lg:px-3 lg:py-2 lg:-ml-3 lg:-mt-2 lg:pt-2"
         >
           <p className="text-xs tracking-[0.25em] text-[#8a8378]">{tag}</p>
-          <p className="mt-1 text-xs tracking-[0.15em] text-[#5c584f]">INDEX — ПОРТФОЛИО / {new Date().getFullYear()}</p>
+          <p className="mt-1 text-xs tracking-[0.15em] text-[#5c584f]">{dict.hero.indexLabel} / {new Date().getFullYear()}</p>
         </div>
       )}
 
@@ -993,7 +961,7 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
           {/* Mobile-only static hero (no scroll animation below lg) */}
           <div className="flex flex-col items-center gap-6 lg:hidden">
             <p className="font-hand text-2xl text-[#8a8378] sm:text-3xl">
-              <TypewriterText phrases={TAGLINE_PHRASES} />
+              <TypewriterText phrases={dict.tagline} />
             </p>
             <div className="flex min-w-0 items-end gap-3">
               <div className="min-w-0">
@@ -1020,7 +988,7 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
               <span className="inline-block" style={{ animation: "arrow-bounce 1.6s ease-in-out infinite" }}>
                 ↙
               </span>{" "}
-              <TypewriterText phrases={TAGLINE_PHRASES} />
+              <TypewriterText phrases={dict.tagline} />
             </p>
             <h1
               ref={nameRef}
@@ -1048,14 +1016,6 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
             <ProfilePhoto avatar={profile.avatar} name={profile.name} />
           </div>
 
-          <div ref={socialRef} className="flex gap-5 text-[#8a8378]">
-            {SOCIAL_LINKS.map((link) => (
-              <a key={link.label} href={link.href} aria-label={link.label} className="transition-colors hover:text-[#ece5d6]">
-                <SocialIcon name={link.icon} />
-              </a>
-            ))}
-          </div>
-
           {(position || profile.currentJobCompany) && (
             <p ref={descRef} className="text-center text-sm text-[#b8b1a3] lg:text-right">
               {position}
@@ -1065,7 +1025,7 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
 
           <nav
             ref={navRef}
-            className="flex max-w-xs flex-wrap justify-center gap-x-4 gap-y-2 text-base tracking-[0.05em] text-[#8a8378] sm:max-w-md sm:gap-x-6 lg:w-80 lg:max-w-none lg:justify-end lg:text-lg xl:text-[28px]"
+            className="flex flex-col items-center gap-y-2 text-base tracking-[0.05em] text-[#8a8378] lg:w-80 lg:items-end lg:text-lg xl:text-[28px] [@media(max-height:860px)]:gap-y-0 [@media(max-height:860px)]:text-lg! [@media(max-height:860px)]:xl:text-lg!"
           >
             {NAV_ITEMS.map((item, index) => (
               <span
@@ -1077,19 +1037,19 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
               >
                 <NavLink href={item.href}>
                   <span className="text-[0.67em] text-[#e2451f]">{String(index + 1).padStart(2, "0")}</span>{" "}
-                  {item.label.toUpperCase()}
+                  {dict.nav[item.key].toUpperCase()}
                 </NavLink>
               </span>
             ))}
           </nav>
 
-          <a
-            ref={emailRef}
-            href="mailto:dtareev123@gmail.com"
-            className="text-sm text-[#ece5d6] underline underline-offset-4"
-          >
-            dtareev123@gmail.com
-          </a>
+          <div ref={socialRef} className="flex gap-5 text-[#8a8378] lg:mt-3">
+            {SOCIAL_LINKS.map((link) => (
+              <a key={link.label} href={link.href} aria-label={link.label} className="transition-colors hover:text-[#ece5d6]">
+                <SocialIcon name={link.icon} />
+              </a>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -1097,7 +1057,7 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
         ref={scrollHintRef}
         className="px-6 pb-10 font-hand text-xl text-[#8a8378] sm:px-12 lg:invisible lg:fixed lg:bottom-10 lg:left-12 lg:z-10 lg:bg-[#141312] lg:px-3 lg:py-2 lg:-ml-3 lg:-mb-2 lg:pb-2"
       >
-        Листай вниз ↓
+        {dict.hero.scrollHint}
       </p>
 
       <a
@@ -1112,7 +1072,7 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
         >
           ↑
         </span>
-        <span className="text-xs tracking-[0.25em] [writing-mode:vertical-rl]">НАВЕРХ</span>
+        <span className="text-xs tracking-[0.25em] [writing-mode:vertical-rl]">{dict.hero.backToTop}</span>
       </a>
 
       {/* lg:pl-20 reserves a permanent left gutter so the fixed "back to top"
@@ -1124,18 +1084,18 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
             element's own position), so an #about anchor jump there would land
             back at the hero instead of at the actual visible content. */}
         <section className="px-6 py-24 sm:px-12 lg:pt-[130vh]">
-          <SectionHeading index={0} label="Обо мне" headingId="about" headingRef={aboutHeadingRef} />
+          <SectionHeading index={0} label={dict.nav.about} headingId="about" headingRef={aboutHeadingRef} />
           <div ref={aboutCopyRef}>
             <p className="mt-10 max-w-[20ch] text-balance text-[clamp(1.875rem,3.4vw,3.25rem)] leading-[1.1] text-[#ece5d6]">
-              Создаю интерфейсы, <span className="text-[#e2451f]">которые работают</span>
+              {dict.about.heading} <span className="text-[#e2451f]">{dict.about.headingAccent}</span>
             </p>
             <p className="mt-5 max-w-[36rem] text-lg text-[#8a8378]">
-              Разрабатываю быстрые, аккуратные продукты — от идеи до продакшена.
+              {dict.about.lead}
             </p>
           </div>
 
           <ul className="mt-16 grid gap-10 md:grid-cols-3 md:gap-8">
-            {SERVICES.map((service) => (
+            {dict.about.services.map((service) => (
               <li key={service.title} className="border-t border-[#3a372f] pt-5">
                 <h3 className="text-lg font-medium text-[#ece5d6]">{service.title}</h3>
                 <p className="mt-3 leading-[1.6] text-[#b8b1a3]">{service.text}</p>
@@ -1152,7 +1112,7 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
 
         {profile.experience.length > 0 && (
           <section id="experience" className="px-6 py-24 sm:px-12">
-            <SectionHeading index={1} label="Опыт" />
+            <SectionHeading index={1} label={dict.experience.heading} />
             <ExperienceTimeline items={profile.experience} />
           </section>
         )}
@@ -1162,21 +1122,21 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
         </div>
 
         <section id="contact" className="px-6 pt-24 sm:px-12">
-          <SectionHeading index={3} label="Контакты" />
+          <SectionHeading index={3} label={dict.contact.heading} />
           <div className="mt-12 grid gap-14 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] xl:gap-20">
             <div>
               <p className="max-w-[24rem] text-[clamp(1.375rem,2vw,1.875rem)] leading-[1.25] text-[#ece5d6]">
-                Есть задача? Напишите — обсудим, как её решить.
+                {dict.contact.lead}
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
-                {CONTACT_BUTTONS.map((button) => (
+                {SOCIAL_LINKS.map((link) => (
                   <a
-                    key={button.label}
-                    href={button.href}
+                    key={link.label}
+                    href={link.href}
                     className="inline-flex items-center gap-2.5 rounded-full border border-[#3a372f] px-5 py-2.5 text-[#ece5d6] transition-colors hover:border-[#e2451f] hover:text-[#e2451f]"
                   >
-                    {button.icon}
-                    {button.label}
+                    <SocialIcon name={link.icon} className="h-4 w-4" />
+                    {link.label}
                   </a>
                 ))}
               </div>
@@ -1188,6 +1148,19 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
             <span>
               © {new Date().getFullYear()} {profile.name}
             </span>
+            <nav className="flex flex-wrap gap-x-6 gap-y-1">
+              <a href={localizedPath("/privacy")} className="hover:text-[#ece5d6]">
+                {dict.footer.privacy}
+              </a>
+              <a href={localizedPath("/consent")} className="hover:text-[#ece5d6]">
+                {dict.footer.consent}
+              </a>
+              {cookieConsent.enabled && (
+                <button type="button" onClick={cookieConsent.openSettings} className="hover:text-[#ece5d6]">
+                  {dict.footer.cookieSettings}
+                </button>
+              )}
+            </nav>
             {position && <span>{position}</span>}
           </footer>
         </section>

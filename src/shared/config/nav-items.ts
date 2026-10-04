@@ -1,8 +1,10 @@
-export type NavItem = { label: string; href: string };
+import type { Dictionary } from "@/shared/i18n/dictionaries";
+
+export type NavItem = { key: keyof Dictionary["nav"]; href: string };
 
 export const NAV_ITEMS: NavItem[] = [
-  { label: "Обо мне", href: "#about" },
-  { label: "Опыт", href: "#experience" },
-  { label: "Проекты", href: "#projects" },
-  { label: "Контакты", href: "#contact" },
+  { key: "about", href: "#about" },
+  { key: "experience", href: "#experience" },
+  { key: "projects", href: "#projects" },
+  { key: "contacts", href: "#contact" },
 ];

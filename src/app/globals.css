@@ -78,3 +78,12 @@ body {
     transform: translateX(-50%);
   }
 }
+
+/* The public site is always dark. Paint the page behind it the same colour, so a
+   different shade never shows through where the site wrapper doesn't reach
+   (Mac overscroll bounce, first paint, short pages). The admin is unaffected. */
+html:has([data-site-root]),
+html:has([data-site-root]) body {
+  background: #141312;
+  color-scheme: dark;
+}

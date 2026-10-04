@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, type PointerEvent, type WheelEvent } from "react";
 import gsap from "gsap";
 import type { Project } from "@/entities/project/model/types";
+import { useDictionary, useLocale, useLocalizedPath } from "@/shared/i18n/locale-provider";
 import { pickLocalized } from "@/shared/lib/localized-text";
 import { SectionHeading } from "@/shared/ui/section-heading";
 
@@ -21,6 +22,9 @@ const WHEEL_STEP = 60;
  * curve regardless of how the drag ended.
  */
 export function ProjectsShowcase({ projects }: { projects: Project[] }) {
+  const dict = useDictionary();
+  const locale = useLocale();
+  const localizedPath = useLocalizedPath();
   const viewportRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
   const index = useRef(0);
@@ -109,12 +113,12 @@ export function ProjectsShowcase({ projects }: { projects: Project[] }) {
   return (
     <section className="py-24">
       <div className="px-6 sm:px-12">
-        <SectionHeading index={2} label="Проекты">
+        <SectionHeading index={2} label={dict.projects.sectionLabel}>
           <Link
-            href="/projects"
+            href={localizedPath("/projects")}
             className="decoration-[#e2451f] decoration-2 underline-offset-[0.15em] transition-colors hover:text-[#e2451f] hover:underline"
           >
-            Избранные работы
+            {dict.projects.featured}
           </Link>
         </SectionHeading>
       </div>
@@ -138,11 +142,11 @@ export function ProjectsShowcase({ projects }: { projects: Project[] }) {
       >
         <div ref={trackRef} className="relative flex gap-6 will-change-transform">
           {projects.map((project) => {
-            const title = pickLocalized(project.title);
+            const title = pickLocalized(project.title, locale);
             return (
               <Link
                 key={project.slug}
-                href={`/projects/${project.slug}`}
+                href={localizedPath(`/projects/${project.slug}`)}
                 draggable={false}
                 className="group w-[82%] shrink-0 sm:w-[78%]"
               >
@@ -150,7 +154,7 @@ export function ProjectsShowcase({ projects }: { projects: Project[] }) {
                   {title}
                 </h3>
                 <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-[#8a8378]">
-                  {pickLocalized(project.description)}
+                  {pickLocalized(project.description, locale)}
                 </p>
                 <div className="mt-5 aspect-[16/10] overflow-hidden bg-[#1a1816]">
                   {project.cover && (

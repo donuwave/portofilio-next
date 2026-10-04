@@ -5,7 +5,7 @@ import { uploadMedia } from "@/entities/media/api/media-api";
 import type { Media } from "@/entities/media/model/types";
 import { ApiClientError } from "@/shared/api/http";
 
-const ACCEPTED_TYPES = "image/jpeg,image/png,image/webp,image/gif,image/avif,video/mp4,video/webm,video/quicktime";
+const ACCEPTED_TYPES = "image/jpeg,image/png,image/webp,image/gif,image/avif,image/svg+xml,video/mp4,video/webm,video/quicktime";
 
 export function UploadMediaForm({ onUploaded }: { onUploaded: (media: Media) => void }) {
   const inputRef = useRef<HTMLInputElement>(null);
