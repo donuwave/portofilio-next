@@ -148,7 +148,7 @@ export function ProjectsShowcase({ projects }: { projects: Project[] }) {
                 key={project.slug}
                 href={localizedPath(`/projects/${project.slug}`)}
                 draggable={false}
-                className="group w-[82%] shrink-0 sm:w-[78%]"
+                className={`group shrink-0 sm:w-[78%] ${projects.length === 1 ? "w-full" : "w-[82%]"}`}
               >
                 <h3 className="truncate font-display text-2xl text-[#ece5d6] transition-colors group-hover:text-[#e2451f]">
                   {title}

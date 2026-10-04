@@ -942,10 +942,25 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
 
   return (
     <div id="top" ref={sectionRef} className="lg:grid lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:items-start">
+      <a
+        href="#top"
+        onClick={handleBackToTopClick}
+        aria-label={dict.hero.backToTop}
+        className="fixed left-3 top-0 z-30 flex h-14 items-center px-3 sm:left-9 lg:hidden"
+      >
+        <svg viewBox="0 0 64 64" className="h-7 w-7" aria-hidden="true">
+          <path
+            fill="#ffffff"
+            fillRule="evenodd"
+            d="M8 12H25C39 12 47.5 20 47.5 32C47.5 44 39 52 25 52H8ZM19.5 22H24.5C32 22 36.5 26.5 36.5 32C36.5 37.5 32 42 24.5 42H19.5Z"
+          />
+        </svg>
+      </a>
+
       {tag && (
         <div
           ref={tagRef}
-          className="px-6 pt-10 sm:px-12 lg:invisible lg:fixed lg:left-12 lg:top-10 lg:z-10 lg:bg-[#141312] lg:px-3 lg:py-2 lg:-ml-3 lg:-mt-2 lg:pt-2"
+          className="px-6 pt-20 sm:px-12 lg:invisible lg:fixed lg:left-12 lg:top-10 lg:z-10 lg:bg-[#141312] lg:px-3 lg:py-2 lg:-ml-3 lg:-mt-2 lg:pt-2"
         >
           <p className="text-xs tracking-[0.25em] text-[#8a8378]">{tag}</p>
           <p className="mt-1 text-xs tracking-[0.15em] text-[#5c584f]">{dict.hero.indexLabel} / {new Date().getFullYear()}</p>
@@ -959,23 +974,36 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
           sibling fixed chrome like the tag/scroll-hint (z-10) whenever a dot
           flew near them. */}
       <div ref={sidebarRef} className="lg:invisible lg:z-20 lg:col-start-2 lg:row-start-1 lg:h-screen">
-        <div className="flex h-full flex-col items-center justify-center gap-6 px-6 py-16 sm:px-12 lg:items-end lg:gap-3 lg:py-10">
+        <div className="flex h-full flex-col items-stretch justify-start gap-9 px-6 pb-6 pt-10 sm:px-12 lg:items-end lg:justify-center lg:gap-3 lg:py-10">
           {/* Mobile-only static hero (no scroll animation below lg) */}
-          <div className="flex flex-col items-center gap-6 lg:hidden">
+          <div className="flex flex-col gap-7 lg:hidden">
             <p className="font-hand text-2xl text-[#8a8378] sm:text-3xl">
+              <span className="inline-block" style={{ animation: "arrow-bounce 1.6s ease-in-out infinite" }}>
+                ↙
+              </span>{" "}
               <TypewriterText phrases={dict.tagline} />
             </p>
-            <div className="flex min-w-0 items-end gap-3">
-              <div className="min-w-0">
-                <h1 className="break-words font-display text-[13vw] uppercase leading-[0.85] tracking-tight sm:text-[10vw]">
-                  <span className="block text-[#ece5d6]">{first || "—"}</span>
-                  {rest && <span className="block text-[#e2451f]">{rest}</span>}
-                </h1>
-                <ScribbleUnderline className="mt-4 h-3 w-32 text-[#ece5d6] sm:h-4 sm:w-44" />
-              </div>
-              <div className="w-16 shrink-0 overflow-hidden rounded-lg border border-[#3a372f] sm:w-24">
+            <div>
+              {/* The size is chosen so the longer of the two words fills the width (it is about
+                  4.8em wide), capped for tablets. */}
+              <h1 className="break-words font-display text-[min(calc((100vw-3rem)/4.9),6.5rem)] uppercase leading-[0.88] tracking-tight sm:text-[min(calc((100vw-6rem)/4.9),6.5rem)]">
+                <span className="block text-[#ece5d6]">{first || "—"}</span>
+                {rest && <span className="block text-[#e2451f]">{rest}</span>}
+              </h1>
+              <ScribbleUnderline className="mt-5 h-3 w-40 text-[#ece5d6] sm:h-4 sm:w-56" />
+            </div>
+            <div className="flex items-center gap-5">
+              <div className="aspect-[3/4] w-24 shrink-0 overflow-hidden rounded-lg border border-[#3a372f] sm:w-32">
                 <ProfilePhoto avatar={profile.avatar} name={profile.name} />
               </div>
+              {(position || profile.currentJobCompany) && (
+                <p className="text-base leading-snug text-[#cfc8b8] sm:text-lg">
+                  {position}
+                  {profile.currentJobCompany && (
+                    <span className="mt-1 block text-sm text-[#8a8378]">{profile.currentJobCompany}</span>
+                  )}
+                </p>
+              )}
             </div>
           </div>
 
@@ -1019,7 +1047,7 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
           </div>
 
           {(position || profile.currentJobCompany) && (
-            <p ref={descRef} className="text-center text-sm text-[#b8b1a3] lg:text-right">
+            <p ref={descRef} className="hidden text-sm text-[#b8b1a3] lg:block lg:text-right">
               {position}
               {profile.currentJobCompany ? ` · ${profile.currentJobCompany}` : ""}
             </p>
@@ -1027,7 +1055,7 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
 
           <nav
             ref={navRef}
-            className="flex flex-col items-center gap-y-2 text-base tracking-[0.05em] text-[#8a8378] lg:w-80 lg:items-end lg:text-lg xl:text-[28px] [@media(max-height:860px)]:gap-y-0 [@media(max-height:860px)]:text-lg! [@media(max-height:860px)]:xl:text-lg!"
+            className="grid grid-cols-2 border-l border-t border-[#2a2824] text-[15px] tracking-[0.12em] text-[#8a8378] sm:text-lg lg:flex lg:w-80 lg:flex-col lg:items-end lg:gap-y-2 lg:border-0 lg:text-lg lg:tracking-[0.05em] xl:text-[28px] lg:[@media(max-height:860px)]:gap-y-0 lg:[@media(max-height:860px)]:text-lg! lg:[@media(max-height:860px)]:xl:text-lg!"
           >
             {NAV_ITEMS.map((item, index) => (
               <span
@@ -1035,7 +1063,7 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
                 ref={(el) => {
                   navItemRefs.current[index] = el;
                 }}
-                className="inline-block"
+                className="block border-b border-r border-[#2a2824] px-4 py-5 lg:inline-block lg:border-0 lg:p-0"
               >
                 <NavLink href={item.href}>
                   <span className="text-[0.67em] text-[#e2451f]">{String(index + 1).padStart(2, "0")}</span>{" "}
@@ -1045,9 +1073,9 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
             ))}
           </nav>
 
-          <div ref={socialRef} className="flex gap-5 text-[#8a8378] lg:mt-3">
+          <div ref={socialRef} className="-ml-3 flex text-[#8a8378] lg:ml-0 lg:mt-3 lg:gap-5">
             {SOCIAL_LINKS.map((link) => (
-              <a key={link.label} href={link.href} aria-label={link.label} className="transition-colors hover:text-[#ece5d6]">
+              <a key={link.label} href={link.href} aria-label={link.label} className="inline-flex h-11 w-11 items-center justify-center transition-colors hover:text-[#ece5d6] lg:block lg:h-auto lg:w-auto">
                 <SocialIcon name={link.icon} />
               </a>
             ))}
@@ -1057,7 +1085,7 @@ export function HomeScrollLayout({ profile, projects }: { profile: Profile; proj
 
       <p
         ref={scrollHintRef}
-        className="px-6 pb-10 font-hand text-xl text-[#8a8378] sm:px-12 lg:invisible lg:fixed lg:bottom-10 lg:left-12 lg:z-10 lg:bg-[#141312] lg:px-3 lg:py-2 lg:-ml-3 lg:-mb-2 lg:pb-2"
+        className="px-6 pb-10 pt-4 font-hand text-xl text-[#8a8378] sm:px-12 lg:invisible lg:fixed lg:bottom-10 lg:left-12 lg:z-10 lg:bg-[#141312] lg:px-3 lg:py-2 lg:-ml-3 lg:-mb-2 lg:pb-2"
       >
         {dict.hero.scrollHint}
       </p>

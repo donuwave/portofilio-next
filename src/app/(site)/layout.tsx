@@ -44,7 +44,11 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
     <div data-site-root className={`isolate before:pointer-events-none before:fixed before:inset-0 before:-z-10 before:bg-[#141312] before:content-[''] ${displayFont.variable} ${handFont.variable} min-h-screen overflow-x-clip overflow-y-visible bg-[#141312] text-[#ece5d6] selection:bg-[#e2451f] selection:text-[#141312]`}>
       <LocaleProvider locale={locale} dict={getDictionary(locale)}>
         <CookieConsentProvider metrikaId={metrikaId}>
-          <LanguageSwitcher className="fixed right-6 top-3 z-40 sm:right-12 sm:top-4" />
+          {/* Below lg: a solid 56px bar so scrolling content never runs under the back link and
+              the language switcher, which sit on one line inside it. From lg up: no bar, the
+              switcher floats top-right as before. */}
+          <div aria-hidden="true" className="fixed inset-x-0 top-0 z-20 h-14 border-b border-[#2a2824] bg-[#141312] lg:hidden" />
+          <LanguageSwitcher className="fixed right-6 top-0 z-40 flex h-14 items-center sm:right-12 lg:top-4 lg:h-auto" />
           <SmoothScrollProvider>{children}</SmoothScrollProvider>
         </CookieConsentProvider>
       </LocaleProvider>

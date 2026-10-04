@@ -11,8 +11,9 @@ export function PageBackLink({ href, children }: { href: string; children: React
   return (
     <Link
       href={href}
-      // left/top are the text position (24px/48px, 24px/32px) minus the px-3 py-1 padding.
-      className="fixed left-3 top-5 z-30 bg-[#141312] px-3 py-1 font-hand text-xl text-[#8a8378] transition-colors hover:text-[#ece5d6] sm:left-9 sm:top-7"
+      // Below lg it sits in the 56px top bar (centred in it, level with the language switcher).
+      // From lg up: left/top are the text position (48px/32px) minus the px-3 py-1 padding.
+      className="fixed left-3 top-0 z-30 flex h-14 items-center bg-transparent px-3 font-hand text-xl text-[#8a8378] transition-colors hover:text-[#ece5d6] sm:left-9 lg:top-7 lg:block lg:h-auto lg:bg-[#141312] lg:py-1"
     >
       {children}
     </Link>
