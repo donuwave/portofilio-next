@@ -46,9 +46,9 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
         <CookieConsentProvider metrikaId={metrikaId}>
           {/* Below lg: a solid 56px bar so scrolling content never runs under the back link and
               the language switcher, which sit on one line inside it. From lg up: no bar, the
-              switcher floats top-right as before. */}
+              switcher sits top-right in a small plate with the page colour behind it, so it stays readable over content. */}
           <div aria-hidden="true" className="fixed inset-x-0 top-0 z-20 h-14 border-b border-[#2a2824] bg-[#141312] lg:hidden" />
-          <LanguageSwitcher className="fixed right-6 top-0 z-40 flex h-14 items-center sm:right-12 lg:top-4 lg:h-auto" />
+          <LanguageSwitcher className="fixed right-6 top-0 z-40 flex h-14 items-center sm:right-12 lg:right-9 lg:top-[11px] lg:h-auto lg:rounded-full lg:border lg:border-[#2a2824] lg:bg-[#141312]/90 lg:px-3 lg:py-1 lg:backdrop-blur" />
           <SmoothScrollProvider>{children}</SmoothScrollProvider>
         </CookieConsentProvider>
       </LocaleProvider>
