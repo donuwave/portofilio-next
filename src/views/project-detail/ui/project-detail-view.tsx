@@ -1,9 +1,13 @@
 import { notFound } from "next/navigation";
 import { getProjectBySlug } from "@/entities/project/api/get-project-by-slug";
+import { DemoVideo } from "@/entities/project/ui/demo-video";
 import { ProjectTag } from "@/entities/project/ui/project-tag";
+import { RepoLinks } from "@/entities/project/ui/repo-links";
+import { TechStack } from "@/entities/project/ui/tech-stack";
 import { getDictionary, getLocale } from "@/shared/i18n/get-locale";
 import { localizePath } from "@/shared/i18n/localize-path";
 import { pickLocalized } from "@/shared/lib/localized-text";
+import { Markdown } from "@/shared/ui/markdown";
 import { PageBackLink } from "@/shared/ui/page-back-link";
 import { SectionHeading } from "@/shared/ui/section-heading";
 import { CaseNav } from "@/widgets/project-cases/ui/case-nav";
@@ -17,8 +21,10 @@ export async function ProjectDetailView({ slug }: { slug: string }) {
   const dict = getDictionary(locale);
   const title = pickLocalized(project.title, locale);
   const description = pickLocalized(project.description, locale);
+  const hasCode = project.repos.length > 0;
   const sections = [
     { id: "project-about", title: dict.projects.aboutProject },
+    ...(hasCode ? [{ id: "project-code", title: dict.projects.code }] : []),
     ...(project.cases.length > 0
       ? [
           {
@@ -44,7 +50,9 @@ export async function ProjectDetailView({ slug }: { slug: string }) {
             {title}
           </h1>
           {project.techStack.length > 0 && (
-            <p className="mt-5 text-sm leading-relaxed text-[#8a8378]">{project.techStack.join(", ")}</p>
+            <div className="mt-5">
+              <TechStack items={project.techStack} variant="chips" />
+            </div>
           )}
         </div>
 
@@ -57,6 +65,12 @@ export async function ProjectDetailView({ slug }: { slug: string }) {
       </aside>
 
       <main className="mt-14 min-w-0 lg:mt-0">
+        {project.demoVideo && (
+          <div className="mb-16 lg:mb-24">
+            <DemoVideo path={project.demoVideo.path} poster={project.cover?.path} label={dict.projects.demoVideoLabel} />
+          </div>
+        )}
+
         <div id="project-about">
           <SectionHeading index={0} label={dict.projects.aboutProject} />
 
@@ -67,11 +81,18 @@ export async function ProjectDetailView({ slug }: { slug: string }) {
             </div>
           )}
 
-          <p className="mt-10 max-w-[44rem] whitespace-pre-line text-lg leading-[1.7] text-[#cfc8b8]">{description}</p>
+          <Markdown className="mt-10 max-w-[44rem]">{description}</Markdown>
         </div>
 
+        {hasCode && (
+          <div id="project-code" className="mt-28">
+            <SectionHeading index={1} label={dict.projects.code} />
+            <RepoLinks repos={project.repos} />
+          </div>
+        )}
+
         <div className="mt-28">
-          <ProjectCases cases={project.cases} locale={locale} />
+          <ProjectCases cases={project.cases} locale={locale} index={hasCode ? 2 : 1} />
         </div>
       </main>
     </div>

@@ -68,7 +68,12 @@ model Project {
   // Who the product is for ("Заказчик", "Перевозчик"...), shown as a label.
   tag         Json?
   coverId     String?
-  cover       Media?        @relation(fields: [coverId], references: [id])
+  cover       Media?        @relation("ProjectCover", fields: [coverId], references: [id])
+  // A short demo clip shown at the very top of the project page.
+  demoVideoId String?
+  demoVideo   Media?        @relation("ProjectDemoVideo", fields: [demoVideoId], references: [id])
+  // Links to the source code: [{ "label": "Frontend", "url": "https://github.com/…" }].
+  repos       Json          @default("[]")
   techStack   String[]
   status      ProjectStatus @default(draft)
   order       Int           @default(0)
@@ -106,7 +111,8 @@ model Media {
   mimeType String
 
   cases                CaseMedia[]
-  usedAsCover          Project[]
+  usedAsCover          Project[]      @relation("ProjectCover")
+  usedAsDemoVideo      Project[]      @relation("ProjectDemoVideo")
   usedAsAvatarOf       Profile?
   usedAsExperienceLogo Experience[]
 

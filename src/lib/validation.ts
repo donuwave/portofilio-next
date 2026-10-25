@@ -57,18 +57,39 @@ export const experienceCreateSchema = z.object({
 
 export const experienceUpdateSchema = experienceCreateSchema.partial();
 
-export const projectCreateSchema = z.object({
+export const repoLinkSchema = z.object({
+  label: z.string().trim().min(1, "Укажите название ссылки").max(60),
+  url: z
+    .string()
+    .trim()
+    .url("Некорректная ссылка")
+    .refine((value) => /^https?:\/\//i.test(value), "Ссылка должна начинаться с http:// или https://"),
+});
+
+const projectFields = z.object({
   slug: slugSchema,
   title: localizedTitleSchema,
   description: localizedTextOptionalSchema,
   tag: localizedTextOptionalSchema.nullable().optional(),
   coverId: z.string().nullable().optional(),
-  techStack: z.array(z.string().min(1)).default([]),
-  status: projectStatusSchema.default("draft"),
-  order: z.number().int().default(0),
+  demoVideoId: z.string().nullable().optional(),
+  repos: z.array(repoLinkSchema).max(10),
+  techStack: z.array(z.string().min(1)),
+  status: projectStatusSchema,
+  order: z.number().int(),
 });
 
-export const projectUpdateSchema = projectCreateSchema.partial();
+export const projectCreateSchema = projectFields.extend({
+  repos: projectFields.shape.repos.default([]),
+  techStack: projectFields.shape.techStack.default([]),
+  status: projectFields.shape.status.default("draft"),
+  order: projectFields.shape.order.default(0),
+});
+
+// No defaults here, on purpose. With Zod 4, `.partial()` keeps `.default()`, so a request that only
+// changes `order` (the arrows in the admin list) used to come out as `{ status: "draft",
+// techStack: [], repos: [], order }` and silently unpublished the project and wiped its fields.
+export const projectUpdateSchema = projectFields.partial();
 
 export const caseCreateSchema = z.object({
   title: localizedTitleSchema,

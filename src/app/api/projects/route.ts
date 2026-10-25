@@ -12,7 +12,7 @@ export async function GET(request: Request) {
 
     const projects = await prisma.project.findMany({
       where: status ? { status } : undefined,
-      include: { cover: true },
+      include: { cover: true, demoVideo: true },
       orderBy: { order: "asc" },
     });
     return NextResponse.json(projects);
@@ -31,7 +31,7 @@ export async function POST(request: Request) {
 
     const project = await prisma.project.create({
       data: { ...data, tag: data.tag === null ? Prisma.DbNull : data.tag },
-      include: { cover: true },
+      include: { cover: true, demoVideo: true },
     });
     return NextResponse.json(project, { status: 201 });
   } catch (err) {

@@ -2,6 +2,8 @@ import Link from "next/link";
 import { localizePath } from "@/shared/i18n/localize-path";
 import type { Locale } from "@/shared/i18n/config";
 import { pickLocalized } from "@/shared/lib/localized-text";
+import { plainText } from "@/shared/lib/markdown";
+import { TechStack } from "./tech-stack";
 import type { Project } from "../model/types";
 
 export function ProjectCard({
@@ -14,7 +16,7 @@ export function ProjectCard({
   headingLevel?: "h2" | "h3";
 }) {
   const title = pickLocalized(project.title, locale);
-  const description = pickLocalized(project.description, locale);
+  const description = plainText(pickLocalized(project.description, locale));
   const tag = project.tag ? pickLocalized(project.tag, locale) : null;
 
   return (
@@ -48,7 +50,9 @@ export function ProjectCard({
       </div>
       {description && <p className="mt-4 line-clamp-3 max-w-[62ch] text-base leading-[1.7] text-[#b8b1a3]">{description}</p>}
       {project.techStack.length > 0 && (
-        <p className="mt-4 text-sm leading-relaxed text-[#8a8378]">{project.techStack.join(", ")}</p>
+        <div className="mt-4">
+          <TechStack items={project.techStack} variant="inline" />
+        </div>
       )}
     </Link>
   );

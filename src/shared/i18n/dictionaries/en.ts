@@ -54,6 +54,8 @@ export const en: Dictionary = {
     back: "← Back",
     aboutProject: "About the project",
     cases: "Cases",
+    code: "Source code",
+    demoVideoLabel: "Project demo video",
     contents: "Contents",
     contentsLabel: "Project contents",
   },

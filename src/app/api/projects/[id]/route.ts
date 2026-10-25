@@ -11,7 +11,7 @@ export async function GET(_request: Request, { params }: Params) {
     const { id } = await params;
     const project = await prisma.project.findUnique({
       where: { id },
-      include: { cover: true, cases: { orderBy: { order: "asc" } } },
+      include: { cover: true, demoVideo: true, cases: { orderBy: { order: "asc" } } },
     });
     if (!project) throw new ApiError(404, "Project not found");
     return NextResponse.json(project);
@@ -37,7 +37,7 @@ export async function PATCH(request: Request, { params }: Params) {
     const project = await prisma.project.update({
       where: { id },
       data: { ...data, tag: data.tag === null ? Prisma.DbNull : data.tag },
-      include: { cover: true, cases: { orderBy: { order: "asc" } } },
+      include: { cover: true, demoVideo: true, cases: { orderBy: { order: "asc" } } },
     });
     return NextResponse.json(project);
   } catch (err) {

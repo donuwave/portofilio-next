@@ -24,18 +24,20 @@ export async function DELETE(_request: Request, { params }: Params) {
     const media = await prisma.media.findUnique({ where: { id } });
     if (!media) throw new ApiError(404, "Media not found");
 
-    const [caseUsageCount, projectCoverCount, profileAvatarCount, experienceLogoCount] = await Promise.all([
+    const [caseUsageCount, projectCoverCount, projectDemoCount, profileAvatarCount, experienceLogoCount] = await Promise.all([
       prisma.caseMedia.count({ where: { mediaId: id } }),
       prisma.project.count({ where: { coverId: id } }),
+      prisma.project.count({ where: { demoVideoId: id } }),
       prisma.profile.count({ where: { avatarId: id } }),
       prisma.experience.count({ where: { logoId: id } }),
     ]);
 
-    const usages = caseUsageCount + projectCoverCount + profileAvatarCount + experienceLogoCount;
+    const usages = caseUsageCount + projectCoverCount + projectDemoCount + profileAvatarCount + experienceLogoCount;
     if (usages > 0) {
       throw new ApiError(409, "Media is still in use and cannot be deleted", {
         cases: caseUsageCount,
         projectCovers: projectCoverCount,
+        projectDemos: projectDemoCount,
         profileAvatar: profileAvatarCount,
         experienceLogos: experienceLogoCount,
       });

@@ -54,6 +54,8 @@ export function AdminProjectsList() {
         description: { ru: "", en: "" },
         tag: null,
         coverId: null,
+        demoVideoId: null,
+        repos: [],
         techStack: [],
         status: "draft",
         order: projects.length > 0 ? Math.max(...projects.map((p) => p.order)) + 1 : 0,

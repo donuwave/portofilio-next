@@ -134,3 +134,163 @@ html:has([data-site-root])::-webkit-scrollbar-corner,
     scrollbar-width: thin;
   }
 }
+
+/* Markdown content (project and case descriptions), see shared/ui/markdown.tsx. The "##" headings
+   are orange because case descriptions used "## Было / ## Что сделали" before markdown existed. */
+.markdown {
+  color: #cfc8b8;
+  font-size: 1.0625rem;
+  line-height: 1.75;
+  overflow-wrap: anywhere;
+}
+.markdown > :first-child {
+  margin-top: 0;
+}
+.markdown p,
+.markdown ul,
+.markdown ol,
+.markdown pre,
+.markdown blockquote,
+.markdown .markdown-table,
+.markdown img {
+  margin-top: 1.1em;
+}
+.markdown h1 {
+  margin-top: 2em;
+  font-size: 1.6rem;
+  line-height: 1.25;
+  font-weight: 600;
+  color: #ece5d6;
+}
+.markdown h2 {
+  margin-top: 2.25em;
+  font-size: 1.125rem;
+  line-height: 1.4;
+  font-weight: 500;
+  color: #e2451f;
+}
+.markdown h3 {
+  margin-top: 1.8em;
+  font-size: 1.125rem;
+  line-height: 1.4;
+  font-weight: 500;
+  color: #ece5d6;
+}
+.markdown h4,
+.markdown h5,
+.markdown h6 {
+  margin-top: 1.6em;
+  font-size: 0.8rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #8a8378;
+}
+.markdown h1 + *,
+.markdown h2 + *,
+.markdown h3 + *,
+.markdown h4 + *,
+.markdown h5 + *,
+.markdown h6 + * {
+  margin-top: 0.5em;
+}
+.markdown strong {
+  color: #ece5d6;
+  font-weight: 600;
+}
+.markdown em {
+  font-style: italic;
+}
+.markdown del {
+  color: #8a8378;
+}
+.markdown a {
+  color: #ece5d6;
+  text-decoration: underline;
+  text-decoration-color: #e2451f;
+  text-underline-offset: 4px;
+  transition: color 0.15s;
+}
+.markdown a:hover {
+  color: #e2451f;
+}
+.markdown ul,
+.markdown ol {
+  padding-left: 1.4em;
+}
+.markdown ul {
+  list-style: disc;
+}
+.markdown ol {
+  list-style: decimal;
+}
+.markdown li {
+  margin-top: 0.4em;
+  padding-left: 0.2em;
+}
+.markdown li::marker {
+  color: #e2451f;
+}
+.markdown li > ul,
+.markdown li > ol {
+  margin-top: 0.4em;
+}
+.markdown blockquote {
+  border-left: 2px solid #e2451f;
+  padding-left: 1em;
+  color: #b8b1a3;
+  font-style: italic;
+}
+.markdown code {
+  border: 1px solid #2a2824;
+  border-radius: 4px;
+  background: #1c1a17;
+  padding: 0.1em 0.35em;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.88em;
+  color: #ece5d6;
+}
+.markdown pre {
+  overflow-x: auto;
+  border: 1px solid #2a2824;
+  border-radius: 8px;
+  background: #1a1816;
+  padding: 1em 1.1em;
+  line-height: 1.55;
+}
+.markdown pre code {
+  border: 0;
+  background: none;
+  padding: 0;
+  font-size: 0.875rem;
+}
+.markdown hr {
+  margin-block: 2em;
+  border: 0;
+  border-top: 1px solid #2a2824;
+}
+.markdown .markdown-table {
+  overflow-x: auto;
+}
+.markdown table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+.markdown th,
+.markdown td {
+  border-bottom: 1px solid #2a2824;
+  padding: 0.55em 0.8em;
+  text-align: left;
+}
+.markdown th {
+  color: #ece5d6;
+  font-weight: 500;
+}
+.markdown img {
+  max-width: 100%;
+  border-radius: 6px;
+}
+.markdown input[type="checkbox"] {
+  margin-right: 0.5em;
+  accent-color: #e2451f;
+}

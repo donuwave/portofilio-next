@@ -6,6 +6,7 @@ import gsap from "gsap";
 import type { Project } from "@/entities/project/model/types";
 import { useDictionary, useLocale, useLocalizedPath } from "@/shared/i18n/locale-provider";
 import { pickLocalized } from "@/shared/lib/localized-text";
+import { plainText } from "@/shared/lib/markdown";
 import { SectionHeading } from "@/shared/ui/section-heading";
 
 const DRAG_THRESHOLD = 6;
@@ -154,7 +155,7 @@ export function ProjectsShowcase({ projects }: { projects: Project[] }) {
                   {title}
                 </h3>
                 <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-[#8a8378]">
-                  {pickLocalized(project.description, locale)}
+                  {plainText(pickLocalized(project.description, locale))}
                 </p>
                 <div className="mt-5 aspect-[16/10] overflow-hidden bg-[#1a1816]">
                   {project.cover && (

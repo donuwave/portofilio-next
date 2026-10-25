@@ -3,6 +3,7 @@ import { getProjectBySlug } from "@/entities/project/api/get-project-by-slug";
 import { getLocale } from "@/shared/i18n/get-locale";
 import { localeAlternates } from "@/shared/i18n/metadata";
 import { pickLocalized } from "@/shared/lib/localized-text";
+import { plainText } from "@/shared/lib/markdown";
 import { ProjectDetailView } from "@/views/project-detail/ui/project-detail-view";
 
 type Params = { params: Promise<{ slug: string }> };
@@ -14,7 +15,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 
   return {
     title: pickLocalized(project.title, locale),
-    description: pickLocalized(project.description, locale),
+    description: plainText(pickLocalized(project.description, locale)).slice(0, 300),
     alternates: localeAlternates(`/projects/${slug}`, locale),
   };
 }

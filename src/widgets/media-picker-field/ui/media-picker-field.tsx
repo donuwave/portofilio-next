@@ -17,7 +17,9 @@ export function MediaPickerField({ value, onChange, type }: MediaPickerFieldProp
   return (
     <div className="flex items-center gap-4">
       <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-md border border-zinc-300 bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900">
-        {value ? (
+        {value && value.type === "video" ? (
+          <video src={value.path} muted preload="metadata" className="h-full w-full object-cover" />
+        ) : value ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={value.path} alt={value.filename} className="h-full w-full object-cover" />
         ) : (

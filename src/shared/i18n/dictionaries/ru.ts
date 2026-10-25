@@ -52,6 +52,8 @@ export const ru = {
     back: "← Назад",
     aboutProject: "О проекте",
     cases: "Кейсы",
+    code: "Код",
+    demoVideoLabel: "Демо-видео проекта",
     contents: "Содержание",
     contentsLabel: "Содержание проекта",
   },

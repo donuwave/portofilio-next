@@ -14,6 +14,10 @@ export type Project = {
   techStack: string[];
 };
 
+export type RepoLink = { label: string; url: string };
+
 export type ProjectDetail = Project & {
+  demoVideo: { path: string } | null;
+  repos: RepoLink[];
   cases: Case[];
 };

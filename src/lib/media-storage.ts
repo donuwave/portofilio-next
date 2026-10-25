@@ -15,6 +15,11 @@ const ALLOWED_MIME_TYPES: Record<string, MediaType> = {
   "video/quicktime": "video",
 };
 
+// Uploads pass through proxy.ts, which buffers request bodies in memory up to
+// experimental.proxyClientMaxBodySize (next.config.ts, 160 MB). Keep these below that, or a body
+// would be silently cut off and saved as a corrupt file.
+export const MAX_UPLOAD_BYTES = { image: 25 * 1024 * 1024, video: 150 * 1024 * 1024 } as const;
+
 export function getUploadsDir() {
   return path.resolve(process.cwd(), process.env.UPLOADS_DIR ?? "./data/uploads");
 }
@@ -27,6 +32,10 @@ export async function saveUploadedFile(file: File) {
   const mediaType = resolveMediaType(file.type);
   if (!mediaType) {
     throw new Error(`Unsupported file type: ${file.type}`);
+  }
+  const maxBytes = MAX_UPLOAD_BYTES[mediaType];
+  if (file.size > maxBytes) {
+    throw new Error(`Файл слишком большой: максимум ${Math.round(maxBytes / 1024 / 1024)} МБ для ${mediaType === "video" ? "видео" : "изображений"}`);
   }
 
   const uploadsDir = getUploadsDir();
